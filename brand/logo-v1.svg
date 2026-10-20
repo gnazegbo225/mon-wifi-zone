@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 96" role="img" aria-label="monwifizone">
+  <title>monwifizone</title>
+  <defs>
+    <mask id="m">
+      <path fill="#fff" d="M40 90S10 60 10 38a30 30 0 0 1 60 0c0 22-30 52-30 52z"/>
+      <g fill="none" stroke="#000" stroke-width="5.5" stroke-linecap="round">
+        <path d="M31.5 43.5a12 12 0 0 1 17 0"/>
+        <path d="M24.4 36.4a22 22 0 0 1 31.2 0"/>
+      </g>
+      <circle cx="40" cy="52" r="4.5"/>
+    </mask>
+  </defs>
+  <rect width="80" height="96" fill="#F77F00" mask="url(#m)"/>
+  <text x="86" y="62" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" font-size="40" font-weight="700" letter-spacing="-0.5"><tspan fill="#00804A">mon</tspan><tspan fill="#F77F00">wifizone</tspan></text>
+</svg>
