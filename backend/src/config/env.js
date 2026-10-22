@@ -3,7 +3,7 @@
 const path = require('node:path');
 require('dotenv').config({ path: path.join(__dirname, '..', '..', '.env'), quiet: true });
 
-const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+const REQUIRED = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'JWT_SECRET'];
 
 const missing = REQUIRED.filter((name) => !process.env[name]);
 if (missing.length > 0) {
@@ -17,4 +17,6 @@ module.exports = {
   corsOrigin: process.env.CORS_ORIGIN || '*',
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+  jwtSecret: process.env.JWT_SECRET,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
 };

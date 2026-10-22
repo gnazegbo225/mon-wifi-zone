@@ -1,0 +1,47 @@
+@import "tailwindcss";
+
+/* Inter, servie depuis le projet (charte : pas de Google Fonts, graisses 400 et 700). */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./assets/fonts/Inter-Regular.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("./assets/fonts/Inter-Bold.woff2") format("woff2");
+}
+
+/* Couleurs et police de brand/charte.md. */
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+  --color-brand: #0f2a5c;        /* Bleu nuit : titres, en-tête, boutons principaux */
+  --color-brand-hover: #0b2149;
+  --color-brand-soft: #e7ecf5;   /* Teinte pâle du bleu, pour les fonds décoratifs */
+  --color-accent: #ff8a00;       /* Orange : formes seulement, jamais du texte sur fond clair */
+  --color-accent-soft: #fff1e0;
+  --color-page: #f7f8fa;         /* Fond des pages */
+  --color-ink: #1a2233;          /* Texte normal */
+  --color-muted: #5b6475;        /* Texte secondaire (contraste 5,6 sur le fond) */
+  --color-line: #dfe3ea;         /* Bordures */
+  --color-success: #1e7b46;
+  --color-success-soft: #e6f4ec;
+  --color-danger: #c62828;
+  --color-danger-soft: #fdecec;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-page font-sans text-base text-ink antialiased;
+  }
+}

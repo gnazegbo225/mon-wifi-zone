@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 6 84 84" role="img" aria-label="monwifizone">
+  <!-- Le ticket seul, repris de brand/logo-v2.svg (sans le texte). -->
+  <defs>
+    <mask id="t">
+      <rect x="4" y="16" width="76" height="64" rx="10" fill="#fff"/>
+      <circle cx="4" cy="48" r="8"/>
+      <circle cx="80" cy="48" r="8"/>
+    </mask>
+  </defs>
+  <rect x="4" y="16" width="76" height="64" fill="#0F2A5C" mask="url(#t)"/>
+  <g fill="none" stroke="#FF8A00" stroke-width="6" stroke-linecap="round">
+    <path d="M32.1 52.1a14 14 0 0 1 19.8 0"/>
+    <path d="M23.6 43.6a26 26 0 0 1 36.8 0"/>
+  </g>
+  <circle cx="42" cy="62" r="5" fill="#FF8A00"/>
+</svg>

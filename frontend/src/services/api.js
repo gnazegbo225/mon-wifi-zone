@@ -1,0 +1,112 @@
+// Seul fichier du frontend qui parle au backend.
+// Le frontend ne parle jamais directement à Supabase : tout passe par l'API.
+const API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
+const TOKEN_KEY = 'mwz_token';
+
+if (!API_URL) {
+  console.error('VITE_API_URL manque dans frontend/.env');
+}
+
+// Erreur renvoyée par toutes les fonctions de ce fichier.
+// status vaut 0 quand le serveur n'a pas pu être joint (pas de réseau, serveur arrêté).
+export class ApiError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+// --- Token -----------------------------------------------------------------
+// « Rester connecté » coché : localStorage (survit à la fermeture du navigateur).
+// Sinon : sessionStorage (effacé à la fermeture de l'onglet).
+
+function safeStorage(kind) {
+  try {
+    return kind === 'local' ? window.localStorage : window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+export function getToken() {
+  return safeStorage('session')?.getItem(TOKEN_KEY) || safeStorage('local')?.getItem(TOKEN_KEY) || null;
+}
+
+function saveToken(token, remember) {
+  clearToken();
+  safeStorage(remember ? 'local' : 'session')?.setItem(TOKEN_KEY, token);
+}
+
+export function clearToken() {
+  safeStorage('local')?.removeItem(TOKEN_KEY);
+  safeStorage('session')?.removeItem(TOKEN_KEY);
+}
+
+// Appelé quand le backend répond 401 sur une route protégée (token expiré ou invalide).
+let onUnauthorized = null;
+export function setUnauthorizedHandler(handler) {
+  onUnauthorized = handler;
+}
+
+// --- Requête générique ----------------------------------------------------
+
+async function request(path, { method = 'GET', body, auth = true } = {}) {
+  const headers = { Accept: 'application/json' };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+
+  const token = auth ? getToken() : null;
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  let response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch {
+    throw new ApiError(0, 'Serveur injoignable');
+  }
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    if (response.status === 401 && auth) {
+      clearToken();
+      onUnauthorized?.();
+    }
+    throw new ApiError(response.status, data?.error || `Erreur ${response.status}`);
+  }
+
+  return data;
+}
+
+// --- Authentification ------------------------------------------------------
+
+export async function login(email, password, remember = false) {
+  const data = await request('/auth/login', {
+    method: 'POST',
+    body: { email, password },
+    auth: false,
+  });
+  saveToken(data.token, remember);
+  return data.user;
+}
+
+export async function getMe() {
+  const data = await request('/auth/me');
+  return data.user;
+}
+
+export function logout() {
+  clearToken();
+}
+
+// --- Données ---------------------------------------------------------------
+
+export async function getPricings(zoneId) {
+  const query = zoneId ? `?zone_id=${encodeURIComponent(zoneId)}` : '';
+  const data = await request(`/pricings${query}`, { auth: false });
+  return data.pricings;
+}
