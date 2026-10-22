@@ -110,6 +110,37 @@ export function LogoutIcon(props) {
   );
 }
 
+export function MapPinIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </Icon>
+  );
+}
+
+export function CoinsIcon(props) {
+  return (
+    <Icon {...props}>
+      <ellipse cx="9" cy="7" rx="5.5" ry="2.5" />
+      <path d="M3.5 7v4c0 1.4 2.5 2.5 5.5 2.5s5.5-1.1 5.5-2.5V7" />
+      <path d="M9.5 16.4c.9 1 3 1.6 5 1.6 3 0 5.5-1.1 5.5-2.5v-4c0-1.2-1.8-2.2-4.3-2.4" />
+      <path d="M3.5 11v4c0 1.4 2.5 2.5 5.5 2.5" />
+    </Icon>
+  );
+}
+
+export function ChartIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20h16" />
+      <rect x="5.5" y="11" width="3" height="6" rx="1" />
+      <rect x="10.5" y="6" width="3" height="11" rx="1" />
+      <rect x="15.5" y="9" width="3" height="8" rx="1" />
+    </Icon>
+  );
+}
+
 export function ChevronRightIcon(props) {
   return (
     <Icon {...props}>

@@ -27,11 +27,8 @@ export default function ForfaitsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-bold text-brand">Forfaits</h1>
-      <p className="mt-1 text-base text-muted">Les forfaits que tes clients peuvent acheter.</p>
-
-      <div className="mt-6">
+    <div className="max-w-5xl">
+      <div>
         {failed ? (
           <div role="alert" className="flex items-start gap-3 rounded-2xl bg-danger-soft p-4 text-sm text-danger">
             <AlertIcon className="mt-px size-5 shrink-0" />
@@ -48,13 +45,13 @@ export default function ForfaitsPage() {
             Un instant, on charge les forfaits…
           </p>
         ) : pricings.length === 0 ? (
-          <p className="rounded-2xl border border-dashed border-line bg-white p-6 text-center text-base text-muted">
+          <p className="rounded-3xl border border-dashed border-line bg-white p-6 text-center text-base text-muted">
             Aucun forfait pour l'instant.
           </p>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {pricings.map((p) => (
-              <li key={p.id} className="relative overflow-hidden rounded-2xl border border-line bg-white p-4">
+              <li key={p.id} className="relative overflow-hidden rounded-3xl border border-line bg-white p-5 shadow-[0_4px_16px_-10px_rgba(15,42,92,0.2)]">
                 <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5 bg-accent" />
                 <p className="text-lg font-bold text-brand">{p.name}</p>
                 <p className="mt-1 text-2xl font-bold text-ink">

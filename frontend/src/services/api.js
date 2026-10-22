@@ -105,6 +105,11 @@ export function logout() {
 
 // --- Données ---------------------------------------------------------------
 
+export async function getZones() {
+  const data = await request('/zones', { auth: false });
+  return data.zones;
+}
+
 export async function getPricings(zoneId) {
   const query = zoneId ? `?zone_id=${encodeURIComponent(zoneId)}` : '';
   const data = await request(`/pricings${query}`, { auth: false });
