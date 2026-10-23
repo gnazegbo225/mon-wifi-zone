@@ -11,7 +11,7 @@ const MENU = [
 ];
 
 const PAGES = {
-  '/dashboard/forfaits': { title: 'Forfaits', subtitle: 'Les forfaits que tes clients peuvent acheter.' },
+  '/dashboard/forfaits': { title: 'Forfaits', subtitle: 'Crée et gère les tarifs que tes clients achètent.' },
   '/dashboard/tickets': { title: 'Tickets', subtitle: 'Les tickets WiFi vendus et disponibles.' },
 };
 

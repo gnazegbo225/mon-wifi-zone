@@ -22,6 +22,14 @@ function requireAuth(req, res, next) {
   }
 }
 
+// Pour une route publique qui en montre plus aux utilisateurs connectés.
+// Sans en-tête Authorization : on continue sans req.user.
+// Avec un en-tête : il doit être valide (sinon 401, comme requireAuth).
+function optionalAuth(req, res, next) {
+  if (!req.headers.authorization) return next();
+  return requireAuth(req, res, next);
+}
+
 // À placer après requireAuth : limite une route à certains rôles.
 // Exemple : router.post('/', requireAuth, requireRole('admin'), createZone);
 function requireRole(...roles) {
@@ -33,4 +41,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { requireAuth, requireRole };
+module.exports = { requireAuth, optionalAuth, requireRole };

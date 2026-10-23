@@ -23,7 +23,8 @@ export default function DashboardHome() {
       .then(([z, p]) => {
         if (cancelled) return;
         setZones(z);
-        setPricings(p);
+        // Un admin reçoit aussi les forfaits désactivés : le tableau de bord ne compte que les actifs.
+        setPricings(p.filter((pricing) => pricing.is_active !== false));
       })
       .catch(() => !cancelled && setFailed(true));
     return () => {

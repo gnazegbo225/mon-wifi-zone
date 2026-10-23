@@ -9,11 +9,13 @@ if (!API_URL) {
 
 // Erreur renvoyée par toutes les fonctions de ce fichier.
 // status vaut 0 quand le serveur n'a pas pu être joint (pas de réseau, serveur arrêté).
+// field indique le champ refusé par le backend (ex : 'amount'), quand il le précise.
 export class ApiError extends Error {
-  constructor(status, message) {
+  constructor(status, message, field = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.field = field;
   }
 }
 
@@ -76,7 +78,7 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
       clearToken();
       onUnauthorized?.();
     }
-    throw new ApiError(response.status, data?.error || `Erreur ${response.status}`);
+    throw new ApiError(response.status, data?.error || `Erreur ${response.status}`, data?.field || null);
   }
 
   return data;
@@ -110,8 +112,30 @@ export async function getZones() {
   return data.zones;
 }
 
+// Le token est envoyé s'il existe : un admin reçoit aussi les forfaits désactivés
+// (avec is_active et ticket_profile). Les autres ne reçoivent que les forfaits actifs.
 export async function getPricings(zoneId) {
   const query = zoneId ? `?zone_id=${encodeURIComponent(zoneId)}` : '';
-  const data = await request(`/pricings${query}`, { auth: false });
+  const data = await request(`/pricings${query}`);
   return data.pricings;
+}
+
+// pricing : { wifi_zone_id, name, amount, duration_label, speed_label, ticket_profile }
+export async function createPricing(pricing) {
+  const data = await request('/pricings', { method: 'POST', body: pricing });
+  return data.pricing;
+}
+
+export async function updatePricing(id, pricing) {
+  const data = await request(`/pricings/${encodeURIComponent(id)}`, { method: 'PUT', body: pricing });
+  return data.pricing;
+}
+
+// Pas de suppression : on active ou on désactive.
+export async function setPricingActive(id, isActive) {
+  const data = await request(`/pricings/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: { is_active: isActive },
+  });
+  return data.pricing;
 }

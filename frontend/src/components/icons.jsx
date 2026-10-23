@@ -141,6 +141,48 @@ export function ChartIcon(props) {
   );
 }
 
+export function PlusIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 5v14M5 12h14" />
+    </Icon>
+  );
+}
+
+export function PencilIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M4 20h4L18.5 9.5a2.8 2.8 0 0 0-4-4L4 16v4Z" />
+      <path d="m13.5 6.5 4 4" />
+    </Icon>
+  );
+}
+
+export function PowerIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3v8" />
+      <path d="M6.6 6.6a8 8 0 1 0 10.8 0" />
+    </Icon>
+  );
+}
+
+export function CheckIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="m5 12.5 4.5 4.5L19 7.5" />
+    </Icon>
+  );
+}
+
+export function CloseIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </Icon>
+  );
+}
+
 export function ChevronRightIcon(props) {
   return (
     <Icon {...props}>

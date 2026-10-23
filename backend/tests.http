@@ -1,0 +1,312 @@
+# Tests manuels de l'API, à lancer avec l'extension VS Code « REST Client » (humao.rest-client).
+# Clique sur « Send Request » au-dessus de chaque requête, dans l'ordre :
+# la connexion et la création remplissent les variables utilisées plus bas.
+#
+# Remplace @adminPassword par ton mot de passe, mais NE COMMITE JAMAIS ce fichier avec.
+
+@baseUrl = http://localhost:3000/api
+@adminEmail = lumafrik1@gmail.com
+@adminPassword = TON_MOT_DE_PASSE
+
+@token = {{login.response.body.$.token}}
+@zoneId = {{zones.response.body.$.zones[0].id}}
+@pricingId = {{createPricing.response.body.$.pricing.id}}
+
+
+### Santé du serveur -> 200 { ok: true }
+GET {{baseUrl}}/health
+
+
+# =============================================================================
+# Authentification
+# =============================================================================
+
+### Connexion admin -> 200 { token, user }
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Mauvais mot de passe -> 401 « Identifiants incorrects »
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "mauvais-mot-de-passe"
+}
+
+### Utilisateur connecté -> 200 { user }
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{token}}
+
+### Sans token -> 401 « Token manquant »
+GET {{baseUrl}}/auth/me
+
+
+# =============================================================================
+# Zones
+# =============================================================================
+
+### Liste des zones (remplit @zoneId avec la première) -> 200
+# @name zones
+GET {{baseUrl}}/zones
+
+
+# =============================================================================
+# Forfaits : lecture
+# =============================================================================
+
+### Public : forfaits actifs seulement, sans ticket_profile -> 200
+GET {{baseUrl}}/pricings
+
+### Admin : tous les forfaits (actifs + désactivés), avec ticket_profile et is_active -> 200
+GET {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+
+### Filtre par zone -> 200
+GET {{baseUrl}}/pricings?zone_id={{zoneId}}
+Authorization: Bearer {{token}}
+
+### Filtre avec une zone mal écrite -> 400 « zone_id invalide »
+GET {{baseUrl}}/pricings?zone_id=pas-un-uuid
+
+### Token invalide sur la lecture -> 401 « Token invalide »
+GET {{baseUrl}}/pricings
+Authorization: Bearer abc
+
+
+# =============================================================================
+# Forfaits : création (admin)
+# =============================================================================
+
+### Créer un forfait valide (remplit @pricingId) -> 201 { pricing }
+# @name createPricing
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 1 heure",
+  "amount": 200,
+  "duration_label": "1 heure",
+  "speed_label": "5 Mbps",
+  "ticket_profile": "1h-5mbps"
+}
+
+### Sans token -> 401
+POST {{baseUrl}}/pricings
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 1 heure",
+  "amount": 200,
+  "duration_label": "1 heure",
+  "ticket_profile": "1h-5mbps"
+}
+
+### Montant à 0 -> 400 (field: amount)
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass gratuit",
+  "amount": 0,
+  "duration_label": "1 heure",
+  "ticket_profile": "1h"
+}
+
+### Montant négatif -> 400 (field: amount)
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 1 heure",
+  "amount": -100,
+  "duration_label": "1 heure",
+  "ticket_profile": "1h"
+}
+
+### Montant décimal -> 400 (field: amount) : le FCFA n'a pas de centimes
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 1 heure",
+  "amount": 199.5,
+  "duration_label": "1 heure",
+  "ticket_profile": "1h"
+}
+
+### Montant en texte -> 400 (field: amount)
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 1 heure",
+  "amount": "200",
+  "duration_label": "1 heure",
+  "ticket_profile": "1h"
+}
+
+### Sans ticket_profile -> 400 (field: ticket_profile)
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 1 heure",
+  "amount": 200,
+  "duration_label": "1 heure"
+}
+
+### ticket_profile vide (espaces) -> 400 (field: ticket_profile)
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 1 heure",
+  "amount": 200,
+  "duration_label": "1 heure",
+  "ticket_profile": "   "
+}
+
+### Sans nom -> 400 (field: name)
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "",
+  "amount": 200,
+  "duration_label": "1 heure",
+  "ticket_profile": "1h"
+}
+
+### Sans durée -> 400 (field: duration_label)
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 1 heure",
+  "amount": 200,
+  "ticket_profile": "1h"
+}
+
+### Zone qui n'existe pas -> 400 (field: wifi_zone_id)
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "11111111-1111-1111-1111-111111111111",
+  "name": "Pass 1 heure",
+  "amount": 200,
+  "duration_label": "1 heure",
+  "ticket_profile": "1h"
+}
+
+### JSON mal formé -> 400 « Le corps de la requête n'est pas un JSON valide. »
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "name": "oubli de guillemet }
+
+
+# =============================================================================
+# Forfaits : modification (admin)
+# =============================================================================
+
+### Modifier le forfait créé plus haut -> 200 { pricing }
+PUT {{baseUrl}}/pricings/{{pricingId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 2 heures",
+  "amount": 350,
+  "duration_label": "2 heures",
+  "speed_label": "10 Mbps",
+  "ticket_profile": "2h-10mbps"
+}
+
+### Modifier avec un montant à 0 -> 400 (field: amount)
+PUT {{baseUrl}}/pricings/{{pricingId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 2 heures",
+  "amount": 0,
+  "duration_label": "2 heures",
+  "ticket_profile": "2h-10mbps"
+}
+
+### Modifier un forfait qui n'existe pas -> 404 « Forfait introuvable »
+PUT {{baseUrl}}/pricings/22222222-2222-2222-2222-222222222222
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 2 heures",
+  "amount": 350,
+  "duration_label": "2 heures",
+  "ticket_profile": "2h"
+}
+
+
+# =============================================================================
+# Forfaits : activer / désactiver (admin). Pas de suppression.
+# =============================================================================
+
+### Désactiver -> 200 { pricing: { is_active: false } }
+PATCH {{baseUrl}}/pricings/{{pricingId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "is_active": false }
+
+### Vérifier : le forfait n'apparaît plus dans la liste publique -> 200
+GET {{baseUrl}}/pricings
+
+### Réactiver -> 200 { pricing: { is_active: true } }
+PATCH {{baseUrl}}/pricings/{{pricingId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "is_active": true }
+
+### is_active qui n'est pas un booléen -> 400 (field: is_active)
+PATCH {{baseUrl}}/pricings/{{pricingId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "is_active": "non" }
+
+### Suppression : la route n'existe pas -> 404 « Route introuvable »
+DELETE {{baseUrl}}/pricings/{{pricingId}}
+Authorization: Bearer {{token}}
