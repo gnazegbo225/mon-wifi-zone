@@ -9,7 +9,7 @@
 @adminPassword = TON_MOT_DE_PASSE
 
 @token = {{login.response.body.$.token}}
-@zoneId = {{zones.response.body.$.zones[0].id}}
+@zoneId = {{createZone.response.body.$.zone.id}}
 @pricingId = {{createPricing.response.body.$.pricing.id}}
 
 
@@ -49,12 +49,101 @@ GET {{baseUrl}}/auth/me
 
 
 # =============================================================================
-# Zones
+# Zones : lecture
 # =============================================================================
 
-### Liste des zones (remplit @zoneId avec la première) -> 200
-# @name zones
+### Public : zones actives seulement -> 200
 GET {{baseUrl}}/zones
+
+### Admin : toutes les zones, avec is_active et stats (forfaits et tickets reliés) -> 200
+GET {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+# Zones : création (admin)
+# =============================================================================
+
+### Créer une zone valide (remplit @zoneId) -> 201 { zone } ; le pays « ci » devient « CI »
+# @name createZone
+POST {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti",
+  "city": "Abidjan",
+  "country": "ci"
+}
+
+### Sans token -> 401
+POST {{baseUrl}}/zones
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti",
+  "city": "Abidjan",
+  "country": "CI"
+}
+
+### Sans nom -> 400 (field: name)
+POST {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "  ",
+  "city": "Abidjan",
+  "country": "CI"
+}
+
+### Sans ville -> 400 (field: city)
+POST {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti",
+  "country": "CI"
+}
+
+### Pays sur 3 lettres -> 400 (field: country)
+POST {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti",
+  "city": "Abidjan",
+  "country": "CIV"
+}
+
+
+# =============================================================================
+# Zones : modification (admin)
+# =============================================================================
+
+### Modifier la zone créée plus haut -> 200 { zone }
+PUT {{baseUrl}}/zones/{{zoneId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti — Cocody",
+  "city": "Abidjan",
+  "country": "CI"
+}
+
+### Modifier une zone qui n'existe pas -> 404 « Zone introuvable »
+PUT {{baseUrl}}/zones/33333333-3333-3333-3333-333333333333
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Zone fantôme",
+  "city": "Abidjan",
+  "country": "CI"
+}
 
 
 # =============================================================================
@@ -309,4 +398,75 @@ Content-Type: application/json
 
 ### Suppression : la route n'existe pas -> 404 « Route introuvable »
 DELETE {{baseUrl}}/pricings/{{pricingId}}
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+# Zones : activer / désactiver (admin). Pas de suppression.
+# Quand une zone est désactivée, ses forfaits ne sont plus proposés aux clients.
+# =============================================================================
+
+### Désactiver la zone -> 200 { zone: { is_active: false } }
+PATCH {{baseUrl}}/zones/{{zoneId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "is_active": false }
+
+### Vérifier : la zone n'apparaît plus dans la liste publique -> 200
+GET {{baseUrl}}/zones
+
+### Vérifier : ses forfaits n'apparaissent plus dans la liste publique -> 200
+GET {{baseUrl}}/pricings?zone_id={{zoneId}}
+
+### Créer un forfait dans la zone désactivée -> 409 (field: wifi_zone_id)
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass soirée",
+  "amount": 500,
+  "duration_label": "5 heures",
+  "ticket_profile": "5h"
+}
+
+### Désactiver puis réactiver un forfait de la zone désactivée -> 200 puis 409
+PATCH {{baseUrl}}/pricings/{{pricingId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "is_active": false }
+
+###
+PATCH {{baseUrl}}/pricings/{{pricingId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "is_active": true }
+
+### Réactiver la zone -> 200 { zone: { is_active: true } }
+PATCH {{baseUrl}}/zones/{{zoneId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "is_active": true }
+
+### Maintenant, réactiver le forfait marche -> 200
+PATCH {{baseUrl}}/pricings/{{pricingId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "is_active": true }
+
+### is_active qui n'est pas un booléen -> 400 (field: is_active)
+PATCH {{baseUrl}}/zones/{{zoneId}}/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "is_active": "oui" }
+
+### Suppression d'une zone : la route n'existe pas -> 404 « Route introuvable »
+DELETE {{baseUrl}}/zones/{{zoneId}}
 Authorization: Bearer {{token}}

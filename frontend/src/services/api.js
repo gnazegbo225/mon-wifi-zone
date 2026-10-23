@@ -107,9 +107,31 @@ export function logout() {
 
 // --- Données ---------------------------------------------------------------
 
+// Le token est envoyé s'il existe : un admin reçoit aussi les zones désactivées,
+// avec is_active et stats (forfaits et tickets reliés à chaque zone).
 export async function getZones() {
-  const data = await request('/zones', { auth: false });
+  const data = await request('/zones');
   return data.zones;
+}
+
+// zone : { name, city, country }
+export async function createZone(zone) {
+  const data = await request('/zones', { method: 'POST', body: zone });
+  return data.zone;
+}
+
+export async function updateZone(id, zone) {
+  const data = await request(`/zones/${encodeURIComponent(id)}`, { method: 'PUT', body: zone });
+  return data.zone;
+}
+
+// Pas de suppression : on active ou on désactive.
+export async function setZoneActive(id, isActive) {
+  const data = await request(`/zones/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: { is_active: isActive },
+  });
+  return data.zone;
 }
 
 // Le token est envoyé s'il existe : un admin reçoit aussi les forfaits désactivés

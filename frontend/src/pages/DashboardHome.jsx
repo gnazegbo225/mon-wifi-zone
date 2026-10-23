@@ -22,9 +22,12 @@ export default function DashboardHome() {
     Promise.all([getZones(), getPricings()])
       .then(([z, p]) => {
         if (cancelled) return;
-        setZones(z);
-        // Un admin reçoit aussi les forfaits désactivés : le tableau de bord ne compte que les actifs.
-        setPricings(p.filter((pricing) => pricing.is_active !== false));
+        // Un admin reçoit aussi les zones et forfaits désactivés : le tableau de bord ne compte
+        // que ce qui est en vente (forfait actif dans une zone active).
+        const activeZones = z.filter((zone) => zone.is_active !== false);
+        const activeZoneIds = new Set(activeZones.map((zone) => zone.id));
+        setZones(activeZones);
+        setPricings(p.filter((pricing) => pricing.is_active !== false && activeZoneIds.has(pricing.wifi_zone_id)));
       })
       .catch(() => !cancelled && setFailed(true));
     return () => {

@@ -2,15 +2,17 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import logoMark from '../assets/logo-mark.svg';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../auth/useAuth';
-import { HomeIcon, LogoutIcon, TagIcon, TicketIcon } from './icons';
+import { HomeIcon, LogoutIcon, MapPinIcon, TagIcon, TicketIcon } from './icons';
 
 const MENU = [
   { to: '/dashboard', label: 'Tableau de bord', short: 'Accueil', icon: HomeIcon, end: true },
+  { to: '/dashboard/zones', label: 'Zones', short: 'Zones', icon: MapPinIcon },
   { to: '/dashboard/forfaits', label: 'Forfaits', short: 'Forfaits', icon: TagIcon },
   { to: '/dashboard/tickets', label: 'Tickets', short: 'Tickets', icon: TicketIcon },
 ];
 
 const PAGES = {
+  '/dashboard/zones': { title: 'Zones', subtitle: 'Tes lieux de vente, avec leurs forfaits et leurs tickets.' },
   '/dashboard/forfaits': { title: 'Forfaits', subtitle: 'Crée et gère les tarifs que tes clients achètent.' },
   '/dashboard/tickets': { title: 'Tickets', subtitle: 'Les tickets WiFi vendus et disponibles.' },
 };
@@ -139,7 +141,7 @@ export default function DashboardLayout() {
         aria-label="Menu principal"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
-        <ul className="grid grid-cols-3">
+        <ul className="grid grid-cols-4">
           {MENU.map(({ to, short, icon: Icon, end }) => (
             <li key={to}>
               <NavLink

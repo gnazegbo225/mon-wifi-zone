@@ -60,14 +60,20 @@ function validatePricing(body) {
   };
 }
 
-async function zoneExists(zoneId) {
-  const { data, error } = await supabase.from('wifi_zones').select('id').eq('id', zoneId).maybeSingle();
+// Renvoie { id, is_active } ou null si la zone n'existe pas.
+async function findZone(zoneId) {
+  const { data, error } = await supabase.from('wifi_zones').select('id, is_active').eq('id', zoneId).maybeSingle();
   if (error) throw error;
-  return Boolean(data);
+  return data;
 }
 
+const INACTIVE_ZONE_ERROR = {
+  error: 'Cette zone est désactivée. Active-la d’abord sur la page Zones.',
+  field: 'wifi_zone_id',
+};
+
 // GET /api/pricings
-// Public : forfaits actifs seulement, sans ticket_profile.
+// Public : forfaits actifs des zones actives seulement, sans ticket_profile.
 // Admin connecté : tous les forfaits (actifs et désactivés), avec ticket_profile et is_active.
 // Filtre optionnel : ?zone_id=<uuid>.
 async function listPricings(req, res) {
@@ -84,7 +90,12 @@ async function listPricings(req, res) {
   if (isAdmin) {
     query = query.order('is_active', { ascending: false });
   } else {
-    query = query.eq('is_active', true);
+    // Un forfait d'une zone désactivée n'est plus proposé aux clients.
+    const { data: zones, error: zonesError } = await supabase.from('wifi_zones').select('id').eq('is_active', true);
+    if (zonesError) throw zonesError;
+    if (zones.length === 0) return res.json({ pricings: [] });
+
+    query = query.eq('is_active', true).in('wifi_zone_id', zones.map((z) => z.id));
   }
   query = query.order('amount', { ascending: true });
 
@@ -97,14 +108,14 @@ async function listPricings(req, res) {
   res.json({ pricings: data });
 }
 
-// POST /api/pricings (admin) : crée un forfait, actif par défaut.
+// POST /api/pricings (admin) : crée un forfait, actif par défaut, dans une zone active.
 async function createPricing(req, res) {
   const { value, field, message } = validatePricing(req.body);
   if (!value) return badRequest(res, field, message);
 
-  if (!(await zoneExists(value.wifi_zone_id))) {
-    return badRequest(res, 'wifi_zone_id', 'Cette zone WiFi n’existe pas.');
-  }
+  const zone = await findZone(value.wifi_zone_id);
+  if (!zone) return badRequest(res, 'wifi_zone_id', 'Cette zone WiFi n’existe pas.');
+  if (!zone.is_active) return res.status(409).json(INACTIVE_ZONE_ERROR);
 
   const { data, error } = await supabase
     .from('pricings')
@@ -126,8 +137,19 @@ async function updatePricing(req, res) {
   const { value, field, message } = validatePricing(req.body);
   if (!value) return badRequest(res, field, message);
 
-  if (!(await zoneExists(value.wifi_zone_id))) {
-    return badRequest(res, 'wifi_zone_id', 'Cette zone WiFi n’existe pas.');
+  const { data: current, error: currentError } = await supabase
+    .from('pricings')
+    .select('wifi_zone_id')
+    .eq('id', id)
+    .maybeSingle();
+  if (currentError) throw currentError;
+  if (!current) return res.status(404).json({ error: 'Forfait introuvable' });
+
+  const zone = await findZone(value.wifi_zone_id);
+  if (!zone) return badRequest(res, 'wifi_zone_id', 'Cette zone WiFi n’existe pas.');
+  // On peut corriger un forfait d'une zone désactivée, mais pas le déplacer vers une zone désactivée.
+  if (!zone.is_active && value.wifi_zone_id !== current.wifi_zone_id) {
+    return res.status(409).json(INACTIVE_ZONE_ERROR);
   }
 
   const { data, error } = await supabase
@@ -159,6 +181,20 @@ async function setPricingStatus(req, res) {
   const isActive = req.body?.is_active;
   if (typeof isActive !== 'boolean') {
     return badRequest(res, 'is_active', 'is_active doit valoir true ou false.');
+  }
+
+  // Réactiver un forfait n'a pas de sens si sa zone est désactivée : les clients ne le verraient pas.
+  if (isActive) {
+    const { data: current, error: currentError } = await supabase
+      .from('pricings')
+      .select('wifi_zones (is_active)')
+      .eq('id', id)
+      .maybeSingle();
+    if (currentError) throw currentError;
+    if (!current) return res.status(404).json({ error: 'Forfait introuvable' });
+    if (current.wifi_zones && !current.wifi_zones.is_active) {
+      return res.status(409).json(INACTIVE_ZONE_ERROR);
+    }
   }
 
   const { data, error } = await supabase

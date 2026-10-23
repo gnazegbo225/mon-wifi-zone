@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import PricingFormDialog from '../components/PricingFormDialog';
 import Spinner from '../components/Spinner';
-import { AlertIcon, CheckIcon, PencilIcon, PlusIcon, PowerIcon, TagIcon } from '../components/icons';
+import { AlertIcon, CloseIcon, MapPinIcon, PencilIcon, PlusIcon, PowerIcon, TagIcon } from '../components/icons';
+import { FilterTabs, Notice, StatusBadge } from '../components/ui';
 import { getPricings, getZones, setPricingActive } from '../services/api';
 
 const priceFormat = new Intl.NumberFormat('fr-FR');
@@ -14,6 +16,7 @@ const FILTERS = [
 ];
 
 const EMPTY_FILTER_TEXT = {
+  all: 'Aucun forfait dans cette zone pour l’instant.',
   active: 'Aucun forfait actif. Active un forfait pour que tes clients puissent l’acheter.',
   inactive: 'Aucun forfait désactivé.',
 };
@@ -26,6 +29,7 @@ function sortPricings(list) {
 export default function ForfaitsPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [pricings, setPricings] = useState(null);
   const [zones, setZones] = useState([]);
@@ -34,7 +38,7 @@ export default function ForfaitsPage() {
   const [filter, setFilter] = useState('all');
   const [editing, setEditing] = useState(null); // null : fermé, 'new' : création, objet : modification
   const [togglingId, setTogglingId] = useState(null);
-  const [notice, setNotice] = useState(null); // { type: 'success' | 'error', text }
+  const [notice, setNotice] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -91,20 +95,28 @@ export default function ForfaitsPage() {
         text:
           err?.status === 0
             ? 'Le serveur ne répond pas. Vérifie ta connexion et réessaie.'
-            : 'Le changement n’a pas marché. Réessaie dans un instant.',
+            : err?.status === 409
+              ? err.message
+              : 'Le changement n’a pas marché. Réessaie dans un instant.',
       });
     } finally {
       setTogglingId(null);
     }
   }
 
-  const zoneName = Object.fromEntries(zones.map((z) => [z.id, z.name]));
+  const zonesById = Object.fromEntries(zones.map((z) => [z.id, z]));
+  const hasActiveZone = zones.some((z) => z.is_active !== false);
+
+  // Filtre par zone (?zone=<id>), par exemple depuis « Voir ses forfaits » sur la page Zones.
+  const zoneFilter = zonesById[searchParams.get('zone')] || null;
+  const inZone = (pricings || []).filter((p) => !zoneFilter || p.wifi_zone_id === zoneFilter.id);
+
   const counts = {
-    all: pricings?.length || 0,
-    active: pricings?.filter((p) => p.is_active !== false).length || 0,
-    inactive: pricings?.filter((p) => p.is_active === false).length || 0,
+    all: inZone.length,
+    active: inZone.filter((p) => p.is_active !== false).length,
+    inactive: inZone.filter((p) => p.is_active === false).length,
   };
-  const visible = (pricings || []).filter((p) =>
+  const visible = inZone.filter((p) =>
     filter === 'active' ? p.is_active !== false : filter === 'inactive' ? p.is_active === false : true,
   );
 
@@ -113,35 +125,11 @@ export default function ForfaitsPage() {
       {/* Barre d'outils : filtres + bouton de création */}
       {isAdmin && pricings && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div
-            role="group"
-            aria-label="Filtrer les forfaits"
-            className="grid grid-cols-3 gap-1 rounded-full border border-line bg-white p-1 sm:inline-grid sm:w-auto"
-          >
-            {FILTERS.map(({ key, label }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setFilter(key)}
-                aria-pressed={filter === key}
-                className={`flex items-center justify-center gap-1.5 rounded-full px-3 py-2 text-sm transition sm:px-4 ${
-                  filter === key ? 'bg-brand font-bold text-white' : 'text-muted hover:text-brand'
-                }`}
-              >
-                {label}
-                <span
-                  className={`rounded-full px-1.5 text-sm ${filter === key ? 'bg-white/15 text-white' : 'bg-brand-soft text-brand'}`}
-                >
-                  {counts[key]}
-                </span>
-              </button>
-            ))}
-          </div>
-
+          <FilterTabs label="Filtrer les forfaits" options={FILTERS} value={filter} counts={counts} onChange={setFilter} />
           <button
             type="button"
             onClick={() => setEditing('new')}
-            disabled={zones.length === 0}
+            disabled={!hasActiveZone}
             className="flex h-12 items-center justify-center gap-2 rounded-full bg-brand px-5 text-base font-bold text-white shadow-[0_10px_24px_-12px_rgba(15,42,92,0.8)] transition hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             <span className="grid size-7 place-items-center rounded-full bg-accent text-brand">
@@ -152,26 +140,39 @@ export default function ForfaitsPage() {
         </div>
       )}
 
-      {isAdmin && pricings && zones.length === 0 && (
-        <p className="text-sm text-muted">Crée d’abord une zone WiFi pour pouvoir ajouter un forfait.</p>
+      {isAdmin && pricings && !hasActiveZone && (
+        <p className="text-sm text-muted">
+          Un forfait appartient toujours à une zone.{' '}
+          <Link to="/dashboard/zones" className="font-bold text-brand underline underline-offset-2">
+            Crée ou active d’abord une zone
+          </Link>
+          .
+        </p>
       )}
 
-      {/* Message après une action */}
-      {notice && (
-        <div
-          role={notice.type === 'error' ? 'alert' : 'status'}
-          className={`flex items-start gap-3 rounded-2xl px-4 py-3 text-sm ${
-            notice.type === 'error' ? 'bg-danger-soft text-danger' : 'bg-success-soft text-success'
-          }`}
-        >
-          {notice.type === 'error' ? (
-            <AlertIcon className="mt-px size-5 shrink-0" />
-          ) : (
-            <CheckIcon className="mt-px size-5 shrink-0" />
+      {zoneFilter && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-line bg-white py-1 pr-1 pl-3 text-sm text-ink">
+            <MapPinIcon className="size-4 shrink-0 text-brand" />
+            <span className="truncate">
+              Zone : <strong className="text-brand">{zoneFilter.name}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => setSearchParams({})}
+              aria-label="Voir les forfaits de toutes les zones"
+              className="grid size-7 shrink-0 place-items-center rounded-full text-muted transition hover:bg-brand-soft hover:text-brand"
+            >
+              <CloseIcon className="size-4" />
+            </button>
+          </span>
+          {zoneFilter.is_active === false && (
+            <span className="text-sm text-muted">Zone désactivée : ses forfaits ne sont pas proposés aux clients.</span>
           )}
-          <p>{notice.text}</p>
         </div>
       )}
+
+      <Notice notice={notice} />
 
       {failed ? (
         <div role="alert" className="flex items-start gap-3 rounded-2xl bg-danger-soft p-4 text-sm text-danger">
@@ -208,7 +209,7 @@ export default function ForfaitsPage() {
             <PricingCard
               key={p.id}
               pricing={p}
-              zoneName={zoneName[p.wifi_zone_id]}
+              zone={zonesById[p.wifi_zone_id]}
               isAdmin={isAdmin}
               toggling={togglingId === p.id}
               onEdit={() => setEditing(p)}
@@ -222,6 +223,7 @@ export default function ForfaitsPage() {
         <PricingFormDialog
           pricing={editing === 'new' ? null : editing}
           zones={zones}
+          defaultZoneId={zoneFilter?.is_active !== false ? zoneFilter?.id : undefined}
           onClose={() => setEditing(null)}
           onSaved={handleSaved}
         />
@@ -230,32 +232,27 @@ export default function ForfaitsPage() {
   );
 }
 
-function PricingCard({ pricing: p, zoneName, isAdmin, toggling, onEdit, onToggle }) {
+function PricingCard({ pricing: p, zone, isAdmin, toggling, onEdit, onToggle }) {
   const active = p.is_active !== false;
+  const zoneActive = zone?.is_active !== false;
+  // Un forfait est en vente seulement s'il est actif ET que sa zone est active.
+  const onSale = active && zoneActive;
 
   return (
     <li
       className={`relative flex flex-col overflow-hidden rounded-3xl border p-5 pl-6 shadow-[0_4px_16px_-10px_rgba(15,42,92,0.2)] transition ${
-        active ? 'border-line bg-white' : 'border-dashed border-line bg-white/60'
+        onSale ? 'border-line bg-white' : 'border-dashed border-line bg-white/60'
       }`}
     >
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${active ? 'bg-accent' : 'bg-line'}`} />
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1.5 ${onSale ? 'bg-accent' : 'bg-line'}`} />
 
       <div className="flex flex-wrap items-center gap-2">
-        {active ? (
-          <span className="inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-sm font-bold text-success">
-            <CheckIcon className="size-4" /> Actif
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 rounded-full bg-page px-2.5 py-0.5 text-sm font-bold text-muted ring-1 ring-line">
-            <PowerIcon className="size-4" /> Désactivé
-          </span>
-        )}
-        {zoneName && <span className="truncate text-sm text-muted">{zoneName}</span>}
+        <StatusBadge active={active} />
+        {zone && <span className="truncate text-sm text-muted">{zone.name}</span>}
       </div>
 
-      <p className={`mt-3 text-lg font-bold ${active ? 'text-brand' : 'text-muted'}`}>{p.name}</p>
-      <p className={`mt-1 text-2xl font-bold ${active ? 'text-ink' : 'text-muted'}`}>
+      <p className={`mt-3 text-lg font-bold ${onSale ? 'text-brand' : 'text-muted'}`}>{p.name}</p>
+      <p className={`mt-1 text-2xl font-bold ${onSale ? 'text-ink' : 'text-muted'}`}>
         {priceFormat.format(p.amount)} <span className="text-base">FCFA</span>
       </p>
       <p className="mt-1 text-sm text-muted">{[p.duration_label, p.speed_label].filter(Boolean).join(' · ')}</p>
@@ -264,6 +261,13 @@ function PricingCard({ pricing: p, zoneName, isAdmin, toggling, onEdit, onToggle
         <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
           Profil MikroTik
           <code className="rounded-lg bg-brand-soft px-2 py-0.5 font-mono text-sm text-brand">{p.ticket_profile}</code>
+        </p>
+      )}
+
+      {isAdmin && !zoneActive && (
+        <p className="mt-3 flex items-start gap-2 rounded-2xl bg-page px-3 py-2 text-sm text-muted">
+          <PowerIcon className="mt-px size-4 shrink-0" />
+          Sa zone est désactivée : ce forfait n’est pas proposé aux clients.
         </p>
       )}
 
@@ -281,9 +285,11 @@ function PricingCard({ pricing: p, zoneName, isAdmin, toggling, onEdit, onToggle
           <button
             type="button"
             onClick={onToggle}
-            disabled={toggling}
+            // Réactiver un forfait n'a pas de sens tant que sa zone est désactivée.
+            disabled={toggling || (!active && !zoneActive)}
+            title={!active && !zoneActive ? 'Active d’abord sa zone sur la page Zones.' : undefined}
             aria-label={`${active ? 'Désactiver' : 'Activer'} ${p.name}`}
-            className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm font-bold transition disabled:cursor-wait ${
+            className={`flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${
               active
                 ? 'border border-line text-ink hover:border-danger hover:text-danger'
                 : 'bg-brand text-white hover:bg-brand-hover'
