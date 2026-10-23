@@ -1,0 +1,12 @@
+﻿Username,Password,Profile
+test-a01,pass01,1h
+test-a02,pass02,1h
+
+test-a03,pass03,24h
+test-a01,pass99,1h
+test-a04,,1h
+,pass05,1h
+test-a06,pass06
+test-a07,pass07,profil-inconnu
+test-a08,pass08,profil-inconnu
+test-a09,pass09,7j

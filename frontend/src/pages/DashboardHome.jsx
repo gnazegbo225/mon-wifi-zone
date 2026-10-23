@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertIcon, ChartIcon, ChevronRightIcon, CoinsIcon, MapPinIcon, TagIcon, TicketIcon } from '../components/icons';
-import { getPricings, getZones } from '../services/api';
+import { getPricings, getTicketStock, getZones } from '../services/api';
 
 const priceFormat = new Intl.NumberFormat('fr-FR');
 const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'short' });
@@ -15,12 +15,13 @@ function lastSixMonths() {
 export default function DashboardHome() {
   const [zones, setZones] = useState(null);
   const [pricings, setPricings] = useState(null);
+  const [ticketsSold, setTicketsSold] = useState(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getZones(), getPricings()])
-      .then(([z, p]) => {
+    Promise.all([getZones(), getPricings(), getTicketStock()])
+      .then(([z, p, stock]) => {
         if (cancelled) return;
         // Un admin reçoit aussi les zones et forfaits désactivés : le tableau de bord ne compte
         // que ce qui est en vente (forfait actif dans une zone active).
@@ -28,6 +29,7 @@ export default function DashboardHome() {
         const activeZoneIds = new Set(activeZones.map((zone) => zone.id));
         setZones(activeZones);
         setPricings(p.filter((pricing) => pricing.is_active !== false && activeZoneIds.has(pricing.wifi_zone_id)));
+        setTicketsSold(stock.reduce((sum, s) => sum + s.sold, 0));
       })
       .catch(() => !cancelled && setFailed(true));
     return () => {
@@ -68,7 +70,7 @@ export default function DashboardHome() {
               hint="forfait le moins cher"
               loading={loading}
             />
-            <StatCard icon={TicketIcon} label="Tickets vendus" value="—" badge="Bientôt" hint="suivi en préparation" />
+            <StatCard icon={TicketIcon} label="Tickets vendus" value={ticketsSold} hint="depuis le début" loading={loading} />
           </div>
 
           <SalesCard />

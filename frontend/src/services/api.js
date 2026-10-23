@@ -53,9 +53,12 @@ export function setUnauthorizedHandler(handler) {
 
 // --- Requête générique ----------------------------------------------------
 
+// body : un objet (envoyé en JSON) ou un FormData (envoi de fichier ; le navigateur pose
+// lui-même le Content-Type multipart avec sa frontière).
 async function request(path, { method = 'GET', body, auth = true } = {}) {
+  const isForm = body instanceof FormData;
   const headers = { Accept: 'application/json' };
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
 
   const token = auth ? getToken() : null;
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -65,7 +68,7 @@ async function request(path, { method = 'GET', body, auth = true } = {}) {
     response = await fetch(`${API_URL}${path}`, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body === undefined || isForm ? body : JSON.stringify(body),
     });
   } catch {
     throw new ApiError(0, 'Serveur injoignable');
@@ -160,4 +163,23 @@ export async function setPricingActive(id, isActive) {
     body: { is_active: isActive },
   });
   return data.pricing;
+}
+
+// --- Tickets ---------------------------------------------------------------
+
+// Envoie un fichier CSV (colonnes Username, Password, Profile) pour une zone.
+// Renvoie le rapport : { imported, duplicates, profiles_without_pricing, invalid_lines }.
+export async function importTickets(zoneId, file) {
+  const form = new FormData();
+  form.append('zone_id', zoneId);
+  form.append('file', file);
+  const data = await request('/tickets/import', { method: 'POST', body: form });
+  return data.report;
+}
+
+// Nombre de tickets libres, réservés et vendus, forfait par forfait. Jamais les identifiants.
+export async function getTicketStock(zoneId) {
+  const query = zoneId ? `?zone_id=${encodeURIComponent(zoneId)}` : '';
+  const data = await request(`/tickets/stock${query}`);
+  return data.stock;
 }

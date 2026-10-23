@@ -67,6 +67,26 @@ async function findZone(zoneId) {
   return data;
 }
 
+// Un profil MikroTik désigne un seul forfait par zone : c'est lui qui relie chaque ticket importé
+// à son forfait. excludeId : le forfait en cours de modification.
+async function profileTaken(zoneId, ticketProfile, excludeId = null) {
+  let query = supabase
+    .from('pricings')
+    .select('id')
+    .eq('wifi_zone_id', zoneId)
+    .eq('ticket_profile', ticketProfile)
+    .limit(1);
+  if (excludeId) query = query.neq('id', excludeId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return data.length > 0;
+}
+
+const PROFILE_TAKEN_ERROR = {
+  error: 'Un autre forfait de cette zone utilise déjà ce profil MikroTik. Choisis un autre profil.',
+  field: 'ticket_profile',
+};
+
 const INACTIVE_ZONE_ERROR = {
   error: 'Cette zone est désactivée. Active-la d’abord sur la page Zones.',
   field: 'wifi_zone_id',
@@ -116,6 +136,7 @@ async function createPricing(req, res) {
   const zone = await findZone(value.wifi_zone_id);
   if (!zone) return badRequest(res, 'wifi_zone_id', 'Cette zone WiFi n’existe pas.');
   if (!zone.is_active) return res.status(409).json(INACTIVE_ZONE_ERROR);
+  if (await profileTaken(value.wifi_zone_id, value.ticket_profile)) return res.status(409).json(PROFILE_TAKEN_ERROR);
 
   const { data, error } = await supabase
     .from('pricings')
@@ -139,7 +160,7 @@ async function updatePricing(req, res) {
 
   const { data: current, error: currentError } = await supabase
     .from('pricings')
-    .select('wifi_zone_id')
+    .select('wifi_zone_id, ticket_profile')
     .eq('id', id)
     .maybeSingle();
   if (currentError) throw currentError;
@@ -150,6 +171,24 @@ async function updatePricing(req, res) {
   // On peut corriger un forfait d'une zone désactivée, mais pas le déplacer vers une zone désactivée.
   if (!zone.is_active && value.wifi_zone_id !== current.wifi_zone_id) {
     return res.status(409).json(INACTIVE_ZONE_ERROR);
+  }
+  if (await profileTaken(value.wifi_zone_id, value.ticket_profile, id)) {
+    return res.status(409).json(PROFILE_TAKEN_ERROR);
+  }
+
+  // Les tickets d'un forfait portent son profil MikroTik : on ne peut plus le changer une fois des tickets importés.
+  if (value.ticket_profile !== current.ticket_profile) {
+    const { count, error: countError } = await supabase
+      .from('tickets')
+      .select('id', { count: 'exact', head: true })
+      .eq('pricing_id', id);
+    if (countError) throw countError;
+    if (count > 0) {
+      return res.status(409).json({
+        error: 'Ce forfait a déjà des tickets. Tu ne peux plus changer son profil MikroTik.',
+        field: 'ticket_profile',
+      });
+    }
   }
 
   const { data, error } = await supabase

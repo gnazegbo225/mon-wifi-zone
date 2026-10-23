@@ -14,7 +14,7 @@ const MENU = [
 const PAGES = {
   '/dashboard/zones': { title: 'Zones', subtitle: 'Tes lieux de vente, avec leurs forfaits et leurs tickets.' },
   '/dashboard/forfaits': { title: 'Forfaits', subtitle: 'Crée et gère les tarifs que tes clients achètent.' },
-  '/dashboard/tickets': { title: 'Tickets', subtitle: 'Les tickets WiFi vendus et disponibles.' },
+  '/dashboard/tickets': { title: 'Tickets', subtitle: 'Importe tes tickets MikroTik et suis ton stock.' },
 };
 
 const ROLE_LABEL = { admin: 'Administrateur', vendeur: 'Vendeur' };

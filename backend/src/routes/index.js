@@ -4,6 +4,7 @@ const healthRoutes = require('./health.routes');
 const zonesRoutes = require('./zones.routes');
 const pricingsRoutes = require('./pricings.routes');
 const authRoutes = require('./auth.routes');
+const ticketsRoutes = require('./tickets.routes');
 
 const router = Router();
 
@@ -11,5 +12,6 @@ router.use('/health', healthRoutes);
 router.use('/zones', zonesRoutes);
 router.use('/pricings', pricingsRoutes);
 router.use('/auth', authRoutes);
+router.use('/tickets', ticketsRoutes);
 
 module.exports = router;

@@ -470,3 +470,160 @@ Content-Type: application/json
 ### Suppression d'une zone : la route n'existe pas -> 404 « Route introuvable »
 DELETE {{baseUrl}}/zones/{{zoneId}}
 Authorization: Bearer {{token}}
+
+
+# =============================================================================
+# Tickets : import CSV (admin) et stock
+# Les fichiers d'exemple sont dans backend/test-data/.
+# On crée d'abord deux forfaits avec les profils utilisés dans ces fichiers (1h et 24h).
+# =============================================================================
+
+### Forfait pour le profil « 1h » -> 201
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 1 heure (tickets)",
+  "amount": 200,
+  "duration_label": "1 heure",
+  "ticket_profile": "1h"
+}
+
+### Forfait pour le profil « 24h » -> 201
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass journée",
+  "amount": 1000,
+  "duration_label": "24 heures",
+  "ticket_profile": "24h"
+}
+
+### Un 2e forfait avec le même profil dans la zone -> 409 (field: ticket_profile)
+POST {{baseUrl}}/pricings
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "wifi_zone_id": "{{zoneId}}",
+  "name": "Pass 1 heure bis",
+  "amount": 250,
+  "duration_label": "1 heure",
+  "ticket_profile": "1h"
+}
+
+### Import séparateur « , » avec BOM, ligne vide, doublon, lignes invalides, profils inconnus -> 200
+# Attendu : imported 3, duplicates [test-a01], profils sans forfait : profil-inconnu (2) et 7j (1),
+# lignes invalides : 7 (mot de passe vide), 8 (nom vide), 9 (colonnes manquantes).
+POST {{baseUrl}}/tickets/import
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----MonWifiZone
+
+------MonWifiZone
+Content-Disposition: form-data; name="zone_id"
+
+{{zoneId}}
+------MonWifiZone
+Content-Disposition: form-data; name="file"; filename="tickets-virgule.csv"
+Content-Type: text/csv
+
+< ./test-data/tickets-virgule.csv
+------MonWifiZone--
+
+### Import séparateur « ; » et en-tête en MAJUSCULES -> 200
+# Attendu : imported 2, duplicates [test-a02] (déjà importé juste avant).
+POST {{baseUrl}}/tickets/import
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----MonWifiZone
+
+------MonWifiZone
+Content-Disposition: form-data; name="zone_id"
+
+{{zoneId}}
+------MonWifiZone
+Content-Disposition: form-data; name="file"; filename="tickets-point-virgule.csv"
+Content-Type: text/csv
+
+< ./test-data/tickets-point-virgule.csv
+------MonWifiZone--
+
+### Réimporter le même fichier : rien n'est importé deux fois -> 200 (imported 0)
+POST {{baseUrl}}/tickets/import
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----MonWifiZone
+
+------MonWifiZone
+Content-Disposition: form-data; name="zone_id"
+
+{{zoneId}}
+------MonWifiZone
+Content-Disposition: form-data; name="file"; filename="tickets-virgule.csv"
+Content-Type: text/csv
+
+< ./test-data/tickets-virgule.csv
+------MonWifiZone--
+
+### Mauvaises colonnes -> 400 « Colonnes manquantes … »
+POST {{baseUrl}}/tickets/import
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----MonWifiZone
+
+------MonWifiZone
+Content-Disposition: form-data; name="zone_id"
+
+{{zoneId}}
+------MonWifiZone
+Content-Disposition: form-data; name="file"; filename="tickets-mauvaises-colonnes.csv"
+Content-Type: text/csv
+
+< ./test-data/tickets-mauvaises-colonnes.csv
+------MonWifiZone--
+
+### Sans fichier -> 400 « Ajoute un fichier CSV. »
+POST {{baseUrl}}/tickets/import
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----MonWifiZone
+
+------MonWifiZone
+Content-Disposition: form-data; name="zone_id"
+
+{{zoneId}}
+------MonWifiZone--
+
+### Fichier qui n'est pas un CSV -> 400 « Le fichier doit être un .csv. »
+POST {{baseUrl}}/tickets/import
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=----MonWifiZone
+
+------MonWifiZone
+Content-Disposition: form-data; name="zone_id"
+
+{{zoneId}}
+------MonWifiZone
+Content-Disposition: form-data; name="file"; filename="photo.pdf"
+Content-Type: application/pdf
+
+pas un csv
+------MonWifiZone--
+
+### Import sans token -> 401
+POST {{baseUrl}}/tickets/import
+Content-Type: multipart/form-data; boundary=----MonWifiZone
+
+------MonWifiZone
+Content-Disposition: form-data; name="zone_id"
+
+{{zoneId}}
+------MonWifiZone--
+
+### Stock par forfait de la zone (libres, réservés, vendus) -> 200
+GET {{baseUrl}}/tickets/stock?zone_id={{zoneId}}
+Authorization: Bearer {{token}}
+
+### Stock sans token -> 401
+GET {{baseUrl}}/tickets/stock
