@@ -9,7 +9,9 @@ import { buildLoginHtml, buildRloginHtml, renderPreview } from '../portal/templa
 import { getZones } from '../services/api';
 import { formatPhone } from '../utils/format';
 
-const FRONTEND_URL = (import.meta.env.VITE_FRONTEND_URL || '').replace(/\/+$/, '');
+// Adresse du site pour les liens du portail : VITE_FRONTEND_URL si elle est définie,
+// sinon l'adresse du site où cette page est ouverte (ex : https://monwifizone.org).
+const FRONTEND_URL = (import.meta.env.VITE_FRONTEND_URL || window.location.origin).replace(/\/+$/, '');
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 // Valeurs d'exemple pour l'aperçu (MikroTik remplit ces balises sur le routeur).
@@ -139,16 +141,6 @@ export default function PortalPage() {
   return (
     <div className="grid max-w-6xl gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
       <div className="space-y-4">
-        {!FRONTEND_URL && (
-          <div role="alert" className="flex items-start gap-3 rounded-2xl bg-danger-soft p-4 text-sm text-danger">
-            <AlertIcon className="mt-px size-5 shrink-0" />
-            <p>
-              L’adresse du site manque : ajoute <code className="font-mono">VITE_FRONTEND_URL</code> dans la configuration du
-              frontend, puis redéploie.
-            </p>
-          </div>
-        )}
-
         {/* Réglages */}
         <section className="rounded-3xl border border-line bg-white p-4 shadow-[0_4px_16px_-10px_rgba(15,42,92,0.2)] sm:p-5">
           <h2 className="text-lg font-bold text-brand">Ton portail</h2>
