@@ -183,6 +183,25 @@ export function CloseIcon(props) {
   );
 }
 
+export function RouterIcon(props) {
+  return (
+    <Icon {...props}>
+      <rect x="3" y="13" width="18" height="7" rx="2" />
+      <path d="M7 16.5h.01M11 16.5h.01" />
+      <path d="M17 13V9" />
+      <path d="M14 6.5a4.5 4.5 0 0 1 6 0" />
+    </Icon>
+  );
+}
+
+export function PhoneIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M5 4h3.5l1.5 4-2 1.5a11 11 0 0 0 6.5 6.5l1.5-2 4 1.5V19a1.5 1.5 0 0 1-1.5 1.5A16.5 16.5 0 0 1 3.5 5.5 1.5 1.5 0 0 1 5 4Z" />
+    </Icon>
+  );
+}
+
 export function ChevronRightIcon(props) {
   return (
     <Icon {...props}>

@@ -3,9 +3,19 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import Spinner from '../components/Spinner';
 import ZoneFormDialog from '../components/ZoneFormDialog';
-import { AlertIcon, ChevronRightIcon, MapPinIcon, PencilIcon, PlusIcon, PowerIcon } from '../components/icons';
+import {
+  AlertIcon,
+  ChevronRightIcon,
+  MapPinIcon,
+  PencilIcon,
+  PhoneIcon,
+  PlusIcon,
+  PowerIcon,
+  RouterIcon,
+} from '../components/icons';
 import { FilterTabs, Notice, StatusBadge } from '../components/ui';
 import { getZones, setZoneActive } from '../services/api';
+import { formatPhone } from '../utils/format';
 
 const FILTERS = [
   { key: 'all', label: 'Toutes' },
@@ -203,6 +213,52 @@ function ZoneCard({ zone: z, isAdmin, toggling, onEdit, onToggle }) {
         </div>
         {isAdmin && <StatusBadge active={active} activeLabel="Active" inactiveLabel="Désactivée" />}
       </div>
+
+      {/* Routeur et gérant (admin seulement) */}
+      {isAdmin && (
+        <dl className="mt-4 space-y-2 text-sm">
+          <div className="flex items-center gap-2">
+            <dt className="flex shrink-0 items-center gap-2 text-muted">
+              <RouterIcon className="size-4" />
+              <span className="sr-only">Routeur</span>
+            </dt>
+            <dd className={`min-w-0 truncate ${z.router_host ? 'font-mono text-ink' : 'text-muted italic'}`}>
+              {z.router_host || 'Adresse du routeur manquante'}
+            </dd>
+          </div>
+          <div className="flex items-center gap-2">
+            <dt className="flex shrink-0 items-center gap-2 text-muted">
+              <PhoneIcon className="size-4" />
+              <span className="sr-only">Téléphone du gérant</span>
+            </dt>
+            <dd className="min-w-0 truncate">
+              {z.manager_phone ? (
+                <a href={`tel:${z.manager_phone}`} className="font-bold text-brand underline-offset-2 hover:underline">
+                  {formatPhone(z.manager_phone)}
+                </a>
+              ) : (
+                <span className="text-muted italic">Téléphone du gérant manquant</span>
+              )}
+            </dd>
+          </div>
+        </dl>
+      )}
+
+      {isAdmin && (!z.router_host || !z.manager_phone) && (
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-accent-soft px-3 py-2">
+          <p className="flex items-center gap-2 text-sm text-ink">
+            <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-accent" />
+            Zone à compléter
+          </p>
+          <button
+            type="button"
+            onClick={onEdit}
+            className="shrink-0 rounded-full bg-white px-3 py-1 text-sm font-bold text-brand transition hover:bg-brand hover:text-white"
+          >
+            Compléter
+          </button>
+        </div>
+      )}
 
       {/* Ce qui est relié à cette zone */}
       {stats && (

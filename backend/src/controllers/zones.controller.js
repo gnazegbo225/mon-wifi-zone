@@ -1,11 +1,32 @@
+const net = require('node:net');
 const supabase = require('../config/supabase');
 const { whereTicketStatus } = require('../utils/ticketStatus');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // owner_id n'est jamais renvoyé : inutile pour le client.
+// router_host et manager_phone sont réservés à l'admin : l'adresse d'un routeur ne doit pas être publique.
 const PUBLIC_COLUMNS = 'id, name, country, city, created_at';
-const ADMIN_COLUMNS = `${PUBLIC_COLUMNS}, is_active`;
+const ADMIN_COLUMNS = `${PUBLIC_COLUMNS}, is_active, router_host, manager_phone`;
+
+const HOSTNAME_REGEX = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
+
+// Adresse du routeur : une IP (v4 ou v6) ou un nom DNS (ex : routeur.monwifizone.org).
+// Renvoie l'adresse nettoyée (en minuscules), ou null si elle n'est pas valide.
+function normalizeRouterHost(value) {
+  const host = value.trim().toLowerCase();
+  if (net.isIP(host)) return host;
+  // Un nom DNS a au moins un point, et sa dernière partie contient une lettre
+  // (sinon « 192.168.1.300 » passerait pour un nom).
+  if (HOSTNAME_REGEX.test(host) && /[a-z]/.test(host.split('.').pop())) return host;
+  return null;
+}
+
+// Téléphone : on enlève espaces, points, tirets et parenthèses ; il reste 8 à 15 chiffres, avec + en option.
+function normalizePhone(value) {
+  const phone = value.replace(/[\s.\-()]/g, '');
+  return /^\+?[0-9]{8,15}$/.test(phone) ? phone : null;
+}
 
 function badRequest(res, field, message) {
   return res.status(400).json({ error: message, field });
@@ -31,7 +52,35 @@ function validateZone(body) {
     return { field: 'country', message: 'Le pays doit être un code de 2 lettres. Par exemple : CI.' };
   }
 
-  return { value: { name, city, country } };
+  const rawHost = text(b.router_host);
+  if (!rawHost) {
+    return { field: 'router_host', message: 'Écris l’adresse IP ou le nom DNS du routeur.' };
+  }
+  // Une IPv6 contient des « : » : on ne refuse « : » et « / » que si ce n'est pas une IP.
+  if (!net.isIP(rawHost) && /[/:]/.test(rawHost)) {
+    return { field: 'router_host', message: 'Écris seulement l’adresse du routeur, sans http://, sans port ni chemin.' };
+  }
+  const routerHost = normalizeRouterHost(rawHost);
+  if (!routerHost) {
+    return {
+      field: 'router_host',
+      message: 'Cette adresse n’est ni une IP ni un nom DNS valide. Par exemple : 102.45.10.20 ou routeur.monwifizone.org.',
+    };
+  }
+
+  const rawPhone = text(b.manager_phone);
+  if (!rawPhone) {
+    return { field: 'manager_phone', message: 'Écris le numéro de téléphone du gérant.' };
+  }
+  const managerPhone = normalizePhone(rawPhone);
+  if (!managerPhone) {
+    return {
+      field: 'manager_phone',
+      message: 'Ce numéro n’est pas valide. Par exemple : 07 07 07 07 07 ou +225 07 07 07 07 07.',
+    };
+  }
+
+  return { value: { name, city, country, router_host: routerHost, manager_phone: managerPhone } };
 }
 
 // Ce qui est relié à chaque zone : ses forfaits et ses tickets.

@@ -1,16 +1,28 @@
 import { useRef, useState } from 'react';
 import { createZone, updateZone } from '../services/api';
+import { formatPhone } from '../utils/format';
 import FormDialog, { Field } from './FormDialog';
 
-const FIELDS = ['name', 'city', 'country'];
+const FIELDS = ['name', 'city', 'country', 'router_host', 'manager_phone'];
 
 // Messages au ton de la charte : on tutoie, phrases courtes, on dit quoi faire.
+// Le backend vérifie le format exact de l'adresse et du numéro, et renvoie son message sur le bon champ.
 function validate(values) {
   const errors = {};
   if (!values.name.trim()) errors.name = 'Donne un nom à la zone. Par exemple : Maquis Chez Tanti.';
   if (!values.city.trim()) errors.city = 'Écris la ville. Par exemple : Abidjan.';
   if (!/^[A-Za-z]{2}$/.test(values.country.trim())) {
     errors.country = 'Écris le code du pays en 2 lettres. Par exemple : CI.';
+  }
+  const host = values.router_host.trim();
+  if (!host) errors.router_host = 'Écris l’adresse IP ou le nom DNS du routeur.';
+  else if (/^[a-z]+:\/\//i.test(host) || host.includes('/')) {
+    errors.router_host = 'Écris seulement l’adresse du routeur, sans http:// ni chemin.';
+  }
+  const phone = values.manager_phone.replace(/[\s.\-()]/g, '');
+  if (!phone) errors.manager_phone = 'Écris le numéro de téléphone du gérant.';
+  else if (!/^\+?[0-9]{8,15}$/.test(phone)) {
+    errors.manager_phone = 'Ce numéro n’est pas valide. Par exemple : 07 07 07 07 07.';
   }
   return errors;
 }
@@ -32,6 +44,8 @@ export default function ZoneFormDialog({ zone, onClose, onSaved }) {
     name: zone?.name || '',
     city: zone?.city || '',
     country: zone?.country || 'CI',
+    router_host: zone?.router_host || '',
+    manager_phone: zone?.manager_phone ? formatPhone(zone.manager_phone) : '',
   });
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
@@ -60,6 +74,8 @@ export default function ZoneFormDialog({ zone, onClose, onSaved }) {
       name: values.name.trim(),
       city: values.city.trim(),
       country: values.country.trim().toUpperCase(),
+      router_host: values.router_host.trim(),
+      manager_phone: values.manager_phone.trim(),
     };
 
     setSaving(true);
@@ -135,6 +151,51 @@ export default function ZoneFormDialog({ zone, onClose, onSaved }) {
             value={values.country}
             onChange={(e) => setField('country', e.target.value.toUpperCase())}
             className={`${props.className} font-bold tracking-widest uppercase`}
+          />
+        )}
+      </Field>
+
+      <Field
+        id="zone-router_host"
+        label="Adresse du routeur"
+        name="router_host"
+        error={errors.router_host}
+        hint="Adresse IP ou nom DNS du MikroTik. Par exemple : 102.45.10.20 ou routeur.monwifizone.org."
+      >
+        {(props) => (
+          <input
+            {...props}
+            type="text"
+            inputMode="url"
+            maxLength={253}
+            autoCapitalize="none"
+            autoComplete="off"
+            spellCheck="false"
+            placeholder="102.45.10.20"
+            value={values.router_host}
+            onChange={(e) => setField('router_host', e.target.value)}
+            className={`${props.className} font-mono`}
+          />
+        )}
+      </Field>
+
+      <Field
+        id="zone-manager_phone"
+        label="Téléphone du gérant"
+        name="manager_phone"
+        error={errors.manager_phone}
+        hint="Avec l’indicatif si besoin. Par exemple : +225 07 07 07 07 07."
+      >
+        {(props) => (
+          <input
+            {...props}
+            type="tel"
+            inputMode="tel"
+            maxLength={22}
+            autoComplete="off"
+            placeholder="07 07 07 07 07"
+            value={values.manager_phone}
+            onChange={(e) => setField('manager_phone', e.target.value)}
           />
         )}
       </Field>

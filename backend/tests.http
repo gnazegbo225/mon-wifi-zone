@@ -73,7 +73,9 @@ Content-Type: application/json
 {
   "name": "Maquis Chez Tanti",
   "city": "Abidjan",
-  "country": "ci"
+  "country": "ci",
+  "router_host": "102.45.10.20",
+  "manager_phone": "07 07 07 07 07"
 }
 
 ### Sans token -> 401
@@ -83,7 +85,9 @@ Content-Type: application/json
 {
   "name": "Maquis Chez Tanti",
   "city": "Abidjan",
-  "country": "CI"
+  "country": "CI",
+  "router_host": "102.45.10.20",
+  "manager_phone": "07 07 07 07 07"
 }
 
 ### Sans nom -> 400 (field: name)
@@ -94,7 +98,9 @@ Content-Type: application/json
 {
   "name": "  ",
   "city": "Abidjan",
-  "country": "CI"
+  "country": "CI",
+  "router_host": "102.45.10.20",
+  "manager_phone": "07 07 07 07 07"
 }
 
 ### Sans ville -> 400 (field: city)
@@ -104,7 +110,9 @@ Content-Type: application/json
 
 {
   "name": "Maquis Chez Tanti",
-  "country": "CI"
+  "country": "CI",
+  "router_host": "102.45.10.20",
+  "manager_phone": "07 07 07 07 07"
 }
 
 ### Pays sur 3 lettres -> 400 (field: country)
@@ -115,7 +123,86 @@ Content-Type: application/json
 {
   "name": "Maquis Chez Tanti",
   "city": "Abidjan",
-  "country": "CIV"
+  "country": "CIV",
+  "router_host": "102.45.10.20",
+  "manager_phone": "07 07 07 07 07"
+}
+
+
+### Sans adresse du routeur -> 400 (field: router_host)
+POST {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti",
+  "city": "Abidjan",
+  "country": "CI",
+  "manager_phone": "07 07 07 07 07"
+}
+
+### Adresse avec http:// et un port -> 400 (field: router_host)
+POST {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti",
+  "city": "Abidjan",
+  "country": "CI",
+  "router_host": "http://102.45.10.20:8728",
+  "manager_phone": "07 07 07 07 07"
+}
+
+### Adresse qui n'est ni une IP ni un nom DNS -> 400 (field: router_host)
+POST {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti",
+  "city": "Abidjan",
+  "country": "CI",
+  "router_host": "192.168.1.300",
+  "manager_phone": "07 07 07 07 07"
+}
+
+### Nom DNS du routeur (accepté, mis en minuscules) -> 201
+POST {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti — Yopougon",
+  "city": "Abidjan",
+  "country": "CI",
+  "router_host": "Routeur-Yop.MonWifiZone.org",
+  "manager_phone": "+225 05 05 05 05 05"
+}
+
+### Sans téléphone du gérant -> 400 (field: manager_phone)
+POST {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti",
+  "city": "Abidjan",
+  "country": "CI",
+  "router_host": "102.45.10.20"
+}
+
+### Téléphone trop court -> 400 (field: manager_phone)
+POST {{baseUrl}}/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Maquis Chez Tanti",
+  "city": "Abidjan",
+  "country": "CI",
+  "router_host": "102.45.10.20",
+  "manager_phone": "0707"
 }
 
 
@@ -131,7 +218,9 @@ Content-Type: application/json
 {
   "name": "Maquis Chez Tanti — Cocody",
   "city": "Abidjan",
-  "country": "CI"
+  "country": "CI",
+  "router_host": "102.45.10.20",
+  "manager_phone": "07 07 07 07 07"
 }
 
 ### Modifier une zone qui n'existe pas -> 404 « Zone introuvable »
@@ -142,7 +231,9 @@ Content-Type: application/json
 {
   "name": "Zone fantôme",
   "city": "Abidjan",
-  "country": "CI"
+  "country": "CI",
+  "router_host": "102.45.10.20",
+  "manager_phone": "07 07 07 07 07"
 }
 
 

@@ -10,7 +10,7 @@
 -- Les clés anon / authenticated n'ont accès à rien.
 --
 -- Ce fichier décrit l'état final de la base. Il sert à créer une base neuve.
--- Une base existante se met à jour avec les fichiers de migrations/ (002, 003).
+-- Une base existante se met à jour avec les fichiers de migrations/ (002, 003, 004).
 -- =============================================================================
 
 BEGIN;
@@ -70,6 +70,12 @@ CREATE TABLE wifi_zones (
     -- false : zone désactivée, ses forfaits ne sont plus proposés aux clients.
     -- On désactive au lieu de supprimer.
     is_active   boolean     NOT NULL DEFAULT true,
+    -- Adresse IP (v4 ou v6) ou nom DNS du routeur MikroTik. Jamais renvoyée aux clients.
+    -- NULL accepté pour les zones créées avant la migration 004 ; le backend l'exige.
+    router_host    text     CHECK (router_host IS NULL
+                                   OR (length(router_host) BETWEEN 2 AND 253 AND router_host !~ '\s')),
+    -- Téléphone du gérant : chiffres seulement, avec + en option. Exigé par le backend.
+    manager_phone  text     CHECK (manager_phone IS NULL OR manager_phone ~ '^\+?[0-9]{8,15}$'),
     created_at  timestamptz NOT NULL DEFAULT now()
 );
 
