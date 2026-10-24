@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="pragma" content="no-cache" />
+    <meta http-equiv="expires" content="-1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#FFFFFF" />
+    <title>Internet hotspot - Log in</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #FFFFFF;
+            color: #111111;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color-scheme: light;
+        }
+
+        .ie-fixMinHeight { flex: 1; display: flex; align-items: flex-start; justify-content: center; width: 100%; }
+        .main { width: 100%; display: flex; justify-content: center; padding: 20px 14px; }
+
+        .wrap {
+            width: 100%;
+            max-width: 400px;
+            border: 1px solid #D8D8D8;
+            border-radius: 10px;
+            padding: 20px 16px;
+        }
+
+        h1 { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 8px; line-height: 1.3; }
+
+        .info { text-align: center; color: #555555; font-size: 14px; line-height: 1.5; margin-bottom: 18px; }
+
+        .info.alert {
+            border: 1px solid #C62828;
+            color: #C62828;
+            padding: 10px 12px;
+            border-radius: 8px;
+            text-align: left;
+        }
+
+        .info a { color: #2E6B00; font-weight: 700; }
+
+        .wifi-container { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+
+        .wifi-button {
+            display: block;
+            padding: 14px 16px;
+            font-size: 15px;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+
+        .wifi-button-primary { background: #A3E635; color: #0A1005; }
+        .wifi-button-secondary { background: #FFFFFF; border: 1px solid #C9C9C9; color: #2E6B00; }
+
+        .sep { text-align: center; color: #777777; font-size: 12px; text-transform: uppercase; margin-bottom: 14px; }
+
+        label { display: block; position: relative; margin-bottom: 10px; }
+        label img.ico { display: none; }
+
+        input[type="text"], input[type="password"] {
+            width: 100%;
+            padding: 13px 12px;
+            border: 1px solid #C9C9C9;
+            border-radius: 8px;
+            font-size: 16px; /* 16px minimum: évite le zoom auto sur iOS */
+            font-family: inherit;
+            color: #111111;
+            background: #FFFFFF;
+        }
+
+        input[type="submit"] {
+            width: 100%;
+            padding: 14px;
+            background: #A3E635;
+            color: #0A1005;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            margin-top: 8px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .info.bt {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px solid #E5E5E5;
+            color: #777777;
+            font-size: 12px;
+        }
+
+        .help { margin-top: 12px; text-align: center; font-size: 13px; }
+        .help a { color: #2E6B00; font-weight: 700; }
+    </style>
+</head>
+<body>
+    $(if chap-id)
+    <form name="sendin" action="$(link-login-only)" method="post" style="display:none">
+        <input type="hidden" name="username" />
+        <input type="hidden" name="password" />
+        <input type="hidden" name="dst" value="$(link-orig)" />
+        <input type="hidden" name="popup" value="true" />
+    </form>
+    <script src="/md5.js"></script>
+    <script>
+        function doLogin() {
+            document.sendin.username.value = document.login.username.value;
+            document.sendin.password.value = hexMD5('$(chap-id)' + document.login.password.value + '$(chap-challenge)');
+            document.sendin.submit();
+            return false;
+        }
+    </script>
+    $(endif)
+    <div class="ie-fixMinHeight">
+        <div class="main">
+            <div class="wrap animated fadeIn">
+                <form name="login" action="$(link-login-only)" method="post" $(if chap-id) onSubmit="return doLogin()" $(endif)>
+                    <input type="hidden" name="dst" value="$(link-orig)" />
+                    <input type="hidden" name="popup" value="true" />
+                    <h1>MON WIFI ZONE JM</h1>
+                    <p class="info $(if error)alert$(endif)">
+                        $(if error == "")Entrez votre nom d'utilisateur et votre mot de passe pour vous connecter $(if trial == 'yes')<br />Essai gratuit disponible, <a href="$(link-login-only)?dst=$(link-orig-esc)&amp;username=T-$(mac-esc)">cliquez ici</a>.$(endif)
+                        $(endif)
+                        $(if error)$(error)$(endif)
+                    </p>
+                    <div class="wifi-container">
+                        <a href="https://fozone.org/buy/9afd979e-a575-4f34-9832-a393f0abfcf8" class="wifi-button wifi-button-primary">
+                            Acheter un ticket Wi-Fi
+                        </a>
+                        <a href="https://fozone.org/payment/return" class="wifi-button wifi-button-secondary">
+                            Récupérer mon ticket
+                        </a>
+                    </div>
+                    <div class="sep">ou connectez-vous</div>
+                    <label>
+                        <img class="ico" src="img/user.svg" alt="" />
+                        <input name="username" type="text" value="$(username)" placeholder="Nom d'utilisateur" />
+                    </label>
+                    <label>
+                        <img class="ico" src="img/password.svg" alt="" />
+                        <input name="password" type="password" placeholder="Mot de passe" />
+                    </label>
+                    <input type="submit" value="SE CONNECTER" />
+                </form>
+                <p class="help">
+                    Un souci&nbsp;? <a>Écrivez-nous sur WhatsApp au +2250709179694</a>
+                </p>
+                <p class="info bt">JM SERVICE</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

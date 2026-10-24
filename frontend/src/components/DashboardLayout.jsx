@@ -2,18 +2,20 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import logoMark from '../assets/logo-mark.svg';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../auth/useAuth';
-import { HomeIcon, LogoutIcon, MapPinIcon, TagIcon, TicketIcon } from './icons';
+import { HomeIcon, LogoutIcon, MapPinIcon, TagIcon, TicketIcon, WifiIcon } from './icons';
 
 const MENU = [
   { to: '/dashboard', label: 'Tableau de bord', short: 'Accueil', icon: HomeIcon, end: true },
   { to: '/dashboard/zones', label: 'Zones', short: 'Zones', icon: MapPinIcon },
   { to: '/dashboard/forfaits', label: 'Forfaits', short: 'Forfaits', icon: TagIcon },
   { to: '/dashboard/tickets', label: 'Tickets', short: 'Tickets', icon: TicketIcon },
+  { to: '/dashboard/portail', label: 'Portail captif', short: 'Portail', icon: WifiIcon, adminOnly: true },
 ];
 
 const PAGES = {
   '/dashboard/zones': { title: 'Zones', subtitle: 'Tes lieux de vente, avec leurs forfaits et leurs tickets.' },
   '/dashboard/forfaits': { title: 'Forfaits', subtitle: 'Crée et gère les tarifs que tes clients achètent.' },
+  '/dashboard/portail': { title: 'Portail captif', subtitle: 'Crée la page de connexion WiFi de tes routeurs.' },
   '/dashboard/tickets': { title: 'Tickets', subtitle: 'Importe tes tickets MikroTik et suis ton stock.' },
 };
 
@@ -35,6 +37,8 @@ function capitalize(text) {
 // Grand écran : menu dans un panneau à gauche, titre et utilisateur en haut.
 export default function DashboardLayout() {
   const { user, signOut } = useAuth();
+  // Certaines pages (portail captif) ne servent qu'à l'admin.
+  const menu = MENU.filter((item) => !item.adminOnly || user?.role === 'admin');
   const { pathname } = useLocation();
 
   const firstName = user?.full_name?.trim().split(/\s+/)[0] || '';
@@ -53,7 +57,7 @@ export default function DashboardLayout() {
 
         <p className="px-3 pb-2 text-sm tracking-wider text-muted uppercase">Menu</p>
         <nav aria-label="Menu principal" className="space-y-1">
-          {MENU.map(({ to, label, icon: Icon, end }) => (
+          {menu.map(({ to, label, icon: Icon, end }) => (
             <NavLink
               key={to}
               to={to}
@@ -141,8 +145,8 @@ export default function DashboardLayout() {
         aria-label="Menu principal"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
-        <ul className="grid grid-cols-4">
-          {MENU.map(({ to, short, icon: Icon, end }) => (
+        <ul className="grid" style={{ gridTemplateColumns: `repeat(${menu.length}, minmax(0, 1fr))` }}>
+          {menu.map(({ to, short, icon: Icon, end }) => (
             <li key={to}>
               <NavLink
                 to={to}

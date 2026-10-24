@@ -202,6 +202,27 @@ export function PhoneIcon(props) {
   );
 }
 
+export function WifiIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M2.5 9a14 14 0 0 1 19 0" />
+      <path d="M5.5 12.5a9.5 9.5 0 0 1 13 0" />
+      <path d="M8.5 16a5 5 0 0 1 7 0" />
+      <path d="M12 19.5h.01" />
+    </Icon>
+  );
+}
+
+export function DownloadIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 4v11" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 19.5h14" />
+    </Icon>
+  );
+}
+
 export function ChevronRightIcon(props) {
   return (
     <Icon {...props}>
