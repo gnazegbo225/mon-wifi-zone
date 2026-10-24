@@ -1,4 +1,9 @@
 -- =============================================================================
+-- ⚠️  REMPLACÉE PAR LA MIGRATION 003 — NE PAS EXÉCUTER.
+-- Elle n'a jamais été appliquée. Sa règle « un ticket reserved a toujours un
+-- paiement » est incompatible avec reserve_ticket(zone, forfait, minutes).
+-- La 003 reprend ses règles utiles, corrigées. Fichier gardé pour l'historique.
+-- =============================================================================
 -- Migration 001 — cohérence des tickets et réservation sans risque
 -- À exécuter une seule fois dans l'éditeur SQL de Supabase, après schema.sql.
 --

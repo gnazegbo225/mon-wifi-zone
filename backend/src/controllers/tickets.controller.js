@@ -1,5 +1,6 @@
 const supabase = require('../config/supabase');
 const { parseCsv, isBlankRecord } = require('../utils/csv');
+const { whereTicketStatus } = require('../utils/ticketStatus');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const REQUIRED_COLUMNS = ['username', 'password', 'profile'];
@@ -166,12 +167,11 @@ async function getStock(req, res) {
   if (error) throw error;
 
   // Les tickets peuvent être des milliers : on les compte, forfait par forfait.
+  // Une réservation expirée compte comme libre.
+  const now = new Date();
   const count = async (pricingId, status) => {
-    const { count: n, error: countError } = await supabase
-      .from('tickets')
-      .select('id', { count: 'exact', head: true })
-      .eq('pricing_id', pricingId)
-      .eq('status', status);
+    const query = supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('pricing_id', pricingId);
+    const { count: n, error: countError } = await whereTicketStatus(query, status, now);
     if (countError) throw countError;
     return n;
   };

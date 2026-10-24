@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { whereTicketStatus } = require('../utils/ticketStatus');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -45,9 +46,11 @@ async function zoneStats(zoneIds) {
     .in('wifi_zone_id', zoneIds);
   if (error) throw error;
 
+  // Une réservation expirée compte comme libre.
+  const now = new Date();
   const countTickets = async (zoneId, status) => {
     let query = supabase.from('tickets').select('id', { count: 'exact', head: true }).eq('wifi_zone_id', zoneId);
-    if (status) query = query.eq('status', status);
+    if (status) query = whereTicketStatus(query, status, now);
     const { count, error: countError } = await query;
     if (countError) throw countError;
     return count;

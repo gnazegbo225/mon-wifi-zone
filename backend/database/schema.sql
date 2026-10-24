@@ -8,6 +8,9 @@
 -- La Row Level Security est activée sur toutes les tables SANS aucune
 -- politique : seul le backend (clé service_role) peut lire et écrire.
 -- Les clés anon / authenticated n'ont accès à rien.
+--
+-- Ce fichier décrit l'état final de la base. Il sert à créer une base neuve.
+-- Une base existante se met à jour avec les fichiers de migrations/ (002, 003).
 -- =============================================================================
 
 BEGIN;
@@ -64,6 +67,9 @@ CREATE TABLE wifi_zones (
     country     char(2)     NOT NULL CHECK (country ~ '^[A-Z]{2}$'),
     city        text        NOT NULL,
     owner_id    uuid        NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+    -- false : zone désactivée, ses forfaits ne sont plus proposés aux clients.
+    -- On désactive au lieu de supprimer.
+    is_active   boolean     NOT NULL DEFAULT true,
     created_at  timestamptz NOT NULL DEFAULT now()
 );
 
@@ -85,7 +91,12 @@ CREATE TABLE pricings (
     duration_label  text    NOT NULL,
     speed_label     text,
     ticket_profile  text    NOT NULL,
-    is_active       boolean NOT NULL DEFAULT true
+    is_active       boolean NOT NULL DEFAULT true,
+    -- Sert de cible aux clés (pricing_id, wifi_zone_id) de tickets et payments :
+    -- un ticket ou un paiement ne peut pas pointer vers le forfait d'une autre zone.
+    CONSTRAINT pricings_id_wifi_zone_id_key UNIQUE (id, wifi_zone_id),
+    -- Un profil MikroTik désigne un seul forfait par zone (il relie chaque ticket à son forfait).
+    CONSTRAINT pricings_zone_profile_key UNIQUE (wifi_zone_id, ticket_profile)
 );
 
 CREATE INDEX pricings_wifi_zone_id_idx ON pricings (wifi_zone_id);
@@ -116,7 +127,11 @@ CREATE TABLE payments (
     created_at              timestamptz NOT NULL DEFAULT now(),
     completed_at            timestamptz,
     -- Un paiement « completed » doit avoir une date de fin
-    CHECK (status <> 'completed' OR completed_at IS NOT NULL)
+    CHECK (status <> 'completed' OR completed_at IS NOT NULL),
+    -- Le forfait payé appartient à la zone du paiement.
+    CONSTRAINT payments_pricing_same_zone_fkey
+        FOREIGN KEY (pricing_id, wifi_zone_id)
+        REFERENCES pricings (id, wifi_zone_id) ON DELETE RESTRICT
 );
 
 CREATE INDEX payments_wifi_zone_id_idx ON payments (wifi_zone_id, created_at DESC);
@@ -130,6 +145,7 @@ COMMENT ON TABLE payments IS
 -- -----------------------------------------------------------------------------
 -- tickets : les identifiants WiFi (username / password) importés depuis MikroTik.
 -- Cycle de vie : free (libre) → reserved (réservé pendant le paiement) → sold (vendu).
+-- Un ticket reserved dont reserved_until est dépassé compte comme libre.
 -- Un username ne peut apparaître qu'une fois par zone.
 -- -----------------------------------------------------------------------------
 CREATE TABLE tickets (
@@ -145,7 +161,25 @@ CREATE TABLE tickets (
     payment_id      uuid        REFERENCES payments (id) ON DELETE SET NULL,
     sold_at         timestamptz,
     created_at      timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT tickets_zone_username_key UNIQUE (wifi_zone_id, username)
+    CONSTRAINT tickets_zone_username_key UNIQUE (wifi_zone_id, username),
+    -- Le forfait du ticket appartient à la zone du ticket.
+    CONSTRAINT tickets_pricing_same_zone_fkey
+        FOREIGN KEY (pricing_id, wifi_zone_id)
+        REFERENCES pricings (id, wifi_zone_id) ON DELETE RESTRICT,
+    -- Statut cohérent avec les autres colonnes :
+    --   free     : pas de paiement, pas de réservation, pas de date de vente
+    --   reserved : une date de fin de réservation (le paiement n'est relié qu'à la vente)
+    --   sold     : relié à un paiement, avec une date de vente
+    -- Effet voulu : on ne peut pas supprimer un paiement relié à un ticket vendu
+    -- (le ON DELETE SET NULL violerait cette règle).
+    CONSTRAINT tickets_status_coherence_check CHECK (
+        (status = 'free'
+            AND payment_id IS NULL AND reserved_until IS NULL AND sold_at IS NULL)
+     OR (status = 'reserved'
+            AND reserved_until IS NOT NULL AND sold_at IS NULL)
+     OR (status = 'sold'
+            AND payment_id IS NOT NULL AND reserved_until IS NULL AND sold_at IS NOT NULL)
+    )
 );
 
 -- Index partiel : trouver rapidement un ticket libre pour une zone et un forfait
@@ -153,7 +187,10 @@ CREATE INDEX tickets_free_by_zone_pricing_idx
     ON tickets (wifi_zone_id, pricing_id)
     WHERE status = 'free';
 
-CREATE INDEX tickets_payment_id_idx ON tickets (payment_id);
+-- Un paiement ne peut être relié qu'à un seul ticket (sert aussi aux recherches).
+CREATE UNIQUE INDEX tickets_payment_id_key
+    ON tickets (payment_id)
+    WHERE payment_id IS NOT NULL;
 
 COMMENT ON TABLE tickets IS
     'Tickets WiFi (identifiant + mot de passe MikroTik). Statut : free (libre), reserved (bloqué pendant un paiement), sold (vendu). Un username est unique dans une même zone.';
@@ -172,6 +209,144 @@ CREATE INDEX payment_idempotency_payment_id_idx ON payment_idempotency (payment_
 
 COMMENT ON TABLE payment_idempotency IS
     'Clés anti-doublon : une même clé renvoie toujours le même paiement, même si la requête est envoyée plusieurs fois.';
+
+
+-- -----------------------------------------------------------------------------
+-- Réservation et vente sans conflit
+--
+-- Le client Supabase (JavaScript) ne gère pas les transactions : ces fonctions
+-- s'exécutent d'un bloc dans Postgres. FOR UPDATE SKIP LOCKED garantit que
+-- deux clients qui achètent au même moment ne reçoivent jamais le même ticket.
+--
+-- Appel depuis le backend :
+--   supabase.rpc('reserve_ticket', { p_zone_id, p_pricing_id, p_minutes })
+--   supabase.rpc('confirm_ticket', { p_ticket_id, p_payment_id })
+-- -----------------------------------------------------------------------------
+
+-- Réserve un ticket libre du forfait demandé, pour p_minutes minutes.
+-- Un ticket « reserved » dont le délai est dépassé compte comme libre.
+-- Renvoie l'id du ticket réservé, ou NULL s'il n'y a plus de ticket libre.
+-- Aucun repli vers un autre forfait : seul le forfait demandé est servi.
+CREATE OR REPLACE FUNCTION reserve_ticket(p_zone_id uuid, p_pricing_id uuid, p_minutes integer DEFAULT 10)
+RETURNS uuid
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+    v_ticket_id uuid;
+BEGIN
+    IF p_minutes IS NULL OR p_minutes <= 0 THEN
+        RAISE EXCEPTION 'p_minutes doit être supérieur à 0';
+    END IF;
+
+    -- Le forfait doit appartenir à la zone, et les deux doivent être en vente.
+    PERFORM 1
+       FROM pricings p
+       JOIN wifi_zones z ON z.id = p.wifi_zone_id
+      WHERE p.id = p_pricing_id
+        AND p.wifi_zone_id = p_zone_id
+        AND p.is_active
+        AND z.is_active;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Forfait % introuvable ou pas en vente dans la zone %', p_pricing_id, p_zone_id;
+    END IF;
+
+    -- Prend le plus ancien ticket disponible, en sautant ceux qu'un autre
+    -- client est en train de prendre au même instant.
+    SELECT id INTO v_ticket_id
+      FROM tickets
+     WHERE wifi_zone_id = p_zone_id
+       AND pricing_id   = p_pricing_id
+       AND (status = 'free' OR (status = 'reserved' AND reserved_until < now()))
+     ORDER BY created_at, id
+     LIMIT 1
+       FOR UPDATE SKIP LOCKED;
+
+    IF v_ticket_id IS NULL THEN
+        RETURN NULL; -- plus de ticket disponible pour ce forfait
+    END IF;
+
+    UPDATE tickets
+       SET status = 'reserved',
+           reserved_until = now() + make_interval(mins => p_minutes),
+           payment_id = NULL
+     WHERE id = v_ticket_id;
+
+    RETURN v_ticket_id;
+END;
+$$;
+
+COMMENT ON FUNCTION reserve_ticket(uuid, uuid, integer) IS
+    'Réserve un ticket libre du forfait (FOR UPDATE SKIP LOCKED). Renvoie son id, ou NULL s''il n''y en a plus. Aucun repli vers un autre forfait.';
+
+
+-- Vend un ticket réservé : il passe en « sold » et est relié au paiement.
+-- Refuse si le ticket n'est pas réservé, si sa réservation a expiré, ou si le
+-- paiement concerne un autre forfait. Renvoie le ticket vendu.
+-- Rappeler la fonction avec le même paiement renvoie le même ticket.
+CREATE OR REPLACE FUNCTION confirm_ticket(p_ticket_id uuid, p_payment_id uuid)
+RETURNS tickets
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+    v_ticket  tickets%ROWTYPE;
+    v_payment payments%ROWTYPE;
+BEGIN
+    SELECT * INTO v_ticket FROM tickets WHERE id = p_ticket_id FOR UPDATE;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Ticket introuvable : %', p_ticket_id;
+    END IF;
+
+    -- Appel répété pour le même paiement : on renvoie le ticket déjà vendu.
+    IF v_ticket.status = 'sold' THEN
+        IF v_ticket.payment_id = p_payment_id THEN
+            RETURN v_ticket;
+        END IF;
+        RAISE EXCEPTION 'Le ticket % est déjà vendu', p_ticket_id;
+    END IF;
+
+    IF v_ticket.status <> 'reserved' THEN
+        RAISE EXCEPTION 'Le ticket % n''est pas réservé', p_ticket_id;
+    END IF;
+    IF v_ticket.reserved_until < now() THEN
+        RAISE EXCEPTION 'La réservation du ticket % a expiré', p_ticket_id;
+    END IF;
+
+    SELECT * INTO v_payment FROM payments WHERE id = p_payment_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Paiement introuvable : %', p_payment_id;
+    END IF;
+    IF v_payment.status IN ('failed', 'cancelled') THEN
+        RAISE EXCEPTION 'Le paiement % a échoué ou a été annulé', p_payment_id;
+    END IF;
+    IF v_payment.pricing_id <> v_ticket.pricing_id OR v_payment.wifi_zone_id <> v_ticket.wifi_zone_id THEN
+        RAISE EXCEPTION 'Le paiement % ne correspond pas au forfait du ticket %', p_payment_id, p_ticket_id;
+    END IF;
+
+    UPDATE tickets
+       SET status = 'sold',
+           sold_at = now(),
+           reserved_until = NULL,
+           payment_id = p_payment_id
+     WHERE id = p_ticket_id
+    RETURNING * INTO v_ticket;
+
+    RETURN v_ticket;
+END;
+$$;
+
+COMMENT ON FUNCTION confirm_ticket(uuid, uuid) IS
+    'Vend un ticket réservé et le relie au paiement. Refuse une réservation expirée ou un paiement d''un autre forfait.';
+
+
+-- Ces fonctions ne doivent être appelables que par le backend (service_role).
+-- Par défaut, Supabase les rendrait accessibles aux clés anon et authenticated.
+REVOKE ALL ON FUNCTION reserve_ticket(uuid, uuid, integer) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION confirm_ticket(uuid, uuid)          FROM PUBLIC, anon, authenticated;
+
+GRANT EXECUTE ON FUNCTION reserve_ticket(uuid, uuid, integer) TO service_role;
+GRANT EXECUTE ON FUNCTION confirm_ticket(uuid, uuid)          TO service_role;
 
 
 -- -----------------------------------------------------------------------------
