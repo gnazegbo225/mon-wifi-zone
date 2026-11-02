@@ -5,6 +5,7 @@ const zonesRoutes = require('./zones.routes');
 const pricingsRoutes = require('./pricings.routes');
 const authRoutes = require('./auth.routes');
 const ticketsRoutes = require('./tickets.routes');
+const publicRoutes = require('./public.routes');
 
 const router = Router();
 
@@ -13,5 +14,6 @@ router.use('/zones', zonesRoutes);
 router.use('/pricings', pricingsRoutes);
 router.use('/auth', authRoutes);
 router.use('/tickets', ticketsRoutes);
+router.use('/public', publicRoutes);
 
 module.exports = router;

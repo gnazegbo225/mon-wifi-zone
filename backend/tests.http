@@ -11,6 +11,8 @@
 @token = {{login.response.body.$.token}}
 @zoneId = {{createZone.response.body.$.zone.id}}
 @pricingId = {{createPricing.response.body.$.pricing.id}}
+@pricing1hId = {{pricing1h.response.body.$.pricing.id}}
+@intentPaymentId = {{intent.response.body.$.payment_id}}
 
 
 ### Santé du serveur -> 200 { ok: true }
@@ -569,7 +571,8 @@ Authorization: Bearer {{token}}
 # On crée d'abord deux forfaits avec les profils utilisés dans ces fichiers (1h et 24h).
 # =============================================================================
 
-### Forfait pour le profil « 1h » -> 201
+### Forfait pour le profil « 1h » -> 201 (remplit @pricing1hId)
+# @name pricing1h
 POST {{baseUrl}}/pricings
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -718,3 +721,125 @@ Authorization: Bearer {{token}}
 
 ### Stock sans token -> 401
 GET {{baseUrl}}/tickets/stock
+
+
+# =============================================================================
+# Parcours client : routes publiques (sans connexion)
+# Limite : 20 requêtes par minute et par adresse IP (ensuite 429).
+# Le paiement a besoin de MONEROO_SECRET_KEY, PAYMENT_CURRENCY et FRONTEND_URL
+# dans .env (sinon 503). ⚠️ Avec une vraie clé, un vrai paiement Moneroo est créé :
+# utilise la clé de test (sandbox) de Moneroo.
+# =============================================================================
+
+### Zone publique : la zone, ses forfaits actifs et les tickets disponibles -> 200
+# Jamais d'adresse de routeur, de profil MikroTik ni de propriétaire.
+GET {{baseUrl}}/public/zones/{{zoneId}}
+
+### Zone qui n'existe pas -> 404
+GET {{baseUrl}}/public/zones/55555555-5555-5555-5555-555555555555
+
+### Identifiant mal écrit -> 404
+GET {{baseUrl}}/public/zones/pas-un-uuid
+
+### Démarrer un paiement -> 201 { payment_id, checkout_url } (remplit @intentPaymentId)
+# Le montant vient de la base : « amount » est ignoré.
+# Un ticket est réservé 15 minutes et relié au paiement « pending ».
+# @name intent
+POST {{baseUrl}}/public/payments/intent
+Content-Type: application/json
+
+{
+  "zone_id": "{{zoneId}}",
+  "pricing_id": "{{pricing1hId}}",
+  "phone": "07 07 07 07 07",
+  "amount": 1
+}
+
+### Le stock baisse d'un ticket -> 200 (available a diminué)
+GET {{baseUrl}}/public/zones/{{zoneId}}
+
+### Téléphone invalide -> 400 (field: phone)
+POST {{baseUrl}}/public/payments/intent
+Content-Type: application/json
+
+{
+  "zone_id": "{{zoneId}}",
+  "pricing_id": "{{pricing1hId}}",
+  "phone": "0707"
+}
+
+### Sans forfait -> 400 (field: pricing_id)
+POST {{baseUrl}}/public/payments/intent
+Content-Type: application/json
+
+{
+  "zone_id": "{{zoneId}}",
+  "phone": "07 07 07 07 07"
+}
+
+### Forfait qui n'appartient pas à la zone -> 404 (field: pricing_id)
+POST {{baseUrl}}/public/payments/intent
+Content-Type: application/json
+
+{
+  "zone_id": "{{zoneId}}",
+  "pricing_id": "22222222-2222-2222-2222-222222222222",
+  "phone": "07 07 07 07 07"
+}
+
+### Forfait désactivé -> 409 « Ce forfait n'est plus en vente »
+# @pricingId a été désactivé puis réactivé plus haut : désactive-le d'abord pour voir ce cas.
+POST {{baseUrl}}/public/payments/intent
+Content-Type: application/json
+
+{
+  "zone_id": "{{zoneId}}",
+  "pricing_id": "{{pricingId}}",
+  "phone": "07 07 07 07 07"
+}
+
+### Plus de ticket disponible -> 409 { "error": "Épuisé" } (Moneroo n'est pas appelé)
+# Relance « Démarrer un paiement » jusqu'à vider le stock du forfait 1h
+# (le fichier tickets-virgule.csv en importe 2, tickets-point-virgule.csv 1 de plus).
+POST {{baseUrl}}/public/payments/intent
+Content-Type: application/json
+
+{
+  "zone_id": "{{zoneId}}",
+  "pricing_id": "{{pricing1hId}}",
+  "phone": "07 07 07 07 07"
+}
+
+
+### ============================================================================
+### Statut d'un paiement (GET /api/public/payments/:id), utilisé par la page /merci
+### Si le paiement est « pending », le backend relit son statut chez Moneroo.
+### ============================================================================
+
+### Statut du paiement créé par « Démarrer un paiement » -> 200 { payment: { status }, ticket }
+# ticket vaut null tant que le paiement n'est pas « completed ».
+GET {{baseUrl}}/public/payments/{{intentPaymentId}}
+
+### Paiement inconnu -> 404 « On ne trouve pas ce paiement. »
+GET {{baseUrl}}/public/payments/00000000-0000-4000-8000-000000000000
+
+### ============================================================================
+### Webhook Moneroo (POST /api/public/payments/webhook)
+### Les vrais appels viennent de Moneroo, signés avec MONEROO_WEBHOOK_SECRET
+### (en-tête X-Moneroo-Signature = HMAC-SHA256 hexadécimal du corps).
+### Pour un test complet : paie en sandbox, puis regarde le terminal du backend
+### (« Webhook payment.success : paiement … → completed »).
+### ============================================================================
+
+### Webhook sans signature -> 403
+POST {{baseUrl}}/public/payments/webhook
+Content-Type: application/json
+
+{ "event": "payment.success", "data": { "id": "py_faux" } }
+
+### Webhook avec une fausse signature -> 403
+POST {{baseUrl}}/public/payments/webhook
+Content-Type: application/json
+X-Moneroo-Signature: 0000000000000000000000000000000000000000000000000000000000000000
+
+{ "event": "payment.success", "data": { "id": "py_faux" } }

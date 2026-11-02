@@ -7,3 +7,8 @@ export function formatPhone(phone) {
   if (phone.startsWith('+')) return `+${phone.slice(1, 4)} ${pairs(phone.slice(4))}`;
   return pairs(phone);
 }
+
+// 1500 → « 1 500 F »
+export function formatPrice(amount) {
+  return `${Number(amount).toLocaleString('fr-FR')} F`;
+}

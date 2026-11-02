@@ -183,3 +183,24 @@ export async function getTicketStock(zoneId) {
   const data = await request(`/tickets/stock${query}`);
   return data.stock;
 }
+
+// --- Parcours client (sans connexion) ---------------------------------------
+
+// La zone, ses forfaits en vente et le nombre de tickets disponibles pour chacun.
+export async function getPublicZone(zoneId) {
+  return request(`/public/zones/${encodeURIComponent(zoneId)}`, { auth: false });
+}
+
+// Réserve un ticket et renvoie { payment_id, checkout_url } (page de paiement Moneroo).
+export async function createPaymentIntent({ zoneId, pricingId, phone }) {
+  return request('/public/payments/intent', {
+    method: 'POST',
+    body: { zone_id: zoneId, pricing_id: pricingId, phone },
+    auth: false,
+  });
+}
+
+// Statut du paiement : { payment: { status, … }, ticket: { username, password } | null }.
+export async function getPaymentStatus(paymentId) {
+  return request(`/public/payments/${encodeURIComponent(paymentId)}`, { auth: false });
+}

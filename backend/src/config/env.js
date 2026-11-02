@@ -19,4 +19,18 @@ module.exports = {
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
+
+  // Paiement (Moneroo). Facultatif au démarrage pour ne pas bloquer le serveur :
+  // seule la route de paiement refuse de fonctionner tant que ces valeurs manquent.
+  monerooSecretKey: process.env.MONEROO_SECRET_KEY || '',
+  // Secret du webhook (« Hash secret » dans Moneroo > Développeurs > Webhooks).
+  monerooWebhookSecret: process.env.MONEROO_WEBHOOK_SECRET || '',
+  monerooBaseUrl: (process.env.MONEROO_BASE_URL || 'https://api.moneroo.io').replace(/\/+$/, ''),
+  paymentCurrency: (process.env.PAYMENT_CURRENCY || '').trim().toUpperCase(),
+  // Tests en sandbox seulement : méthodes Moneroo imposées à la place de celles du pays
+  // (ex : moneroo_payment_demo, en USD). Vide en production.
+  monerooTestMethods: (process.env.MONEROO_TEST_METHODS || '').split(',').map((m) => m.trim()).filter(Boolean),
+  // Adresse publique du site client (sans / final) : sert au retour après paiement.
+  frontendUrl: (process.env.FRONTEND_URL || '').replace(/\/+$/, ''),
+  platformName: process.env.PLATFORM_NAME || 'monwifizone',
 };
