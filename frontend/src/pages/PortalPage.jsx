@@ -6,6 +6,7 @@ import { Field } from '../components/FormDialog';
 import Spinner from '../components/Spinner';
 import { AlertIcon, CheckIcon, DownloadIcon, WifiIcon } from '../components/icons';
 import { buildLoginHtml, buildRloginHtml, renderPreview } from '../portal/templates';
+import { buildWalledGardenScript } from '../portal/walledGarden';
 import { getZones } from '../services/api';
 import { formatPhone } from '../utils/format';
 
@@ -17,20 +18,12 @@ const API_URL = import.meta.env.VITE_API_URL || '';
 // Valeurs d'exemple pour l'aperçu (MikroTik remplit ces balises sur le routeur).
 const PREVIEW_ERROR = 'invalid username or password';
 
-function hostOf(url) {
-  try {
-    return new URL(url).host;
-  } catch {
-    return '';
-  }
-}
-
 function cleanPhone(value) {
   return value.replace(/[\s.\-()]/g, '');
 }
 
-function download(fileName, content) {
-  const blob = new Blob([content], { type: 'text/html;charset=utf-8' });
+function download(fileName, content, type = 'text/html;charset=utf-8') {
+  const blob = new Blob([content], { type });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -53,6 +46,7 @@ export default function PortalPage() {
   const [errors, setErrors] = useState({});
   const [previewError, setPreviewError] = useState(false);
   const [downloaded, setDownloaded] = useState([]);
+  const [scriptCopied, setScriptCopied] = useState(false);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -136,7 +130,17 @@ export default function PortalPage() {
     );
   }
 
-  const whitelist = [hostOf(FRONTEND_URL), hostOf(API_URL)].filter((h, i, list) => h && list.indexOf(h) === i);
+  const walledGardenScript = buildWalledGardenScript({ frontendUrl: FRONTEND_URL, apiUrl: API_URL, zoneName: zone?.name });
+
+  async function copyScript() {
+    try {
+      await navigator.clipboard.writeText(walledGardenScript);
+    } catch {
+      return; // presse-papiers refusé : le script reste sélectionnable à la main
+    }
+    setScriptCopied(true);
+    setTimeout(() => setScriptCopied(false), 2000);
+  }
 
   return (
     <div className="grid max-w-6xl gap-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
@@ -259,20 +263,42 @@ export default function PortalPage() {
             </li>
             <li className="flex gap-3">
               <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand text-sm font-bold text-white">2</span>
-              <span>
-                Ajoute ces adresses à la liste blanche (<strong>walled garden</strong>) du hotspot, sinon tes clients ne
-                pourront pas acheter avant d’être connectés :
-                <span className="mt-2 flex flex-wrap gap-2">
-                  {whitelist.length > 0 ? (
-                    whitelist.map((host) => (
-                      <code key={host} className="rounded-lg bg-white px-2 py-0.5 font-mono text-sm text-brand ring-1 ring-line">
-                        {host}
-                      </code>
-                    ))
-                  ) : (
-                    <span className="text-muted">l’adresse du site et celle de l’API.</span>
-                  )}
+              <span className="min-w-0 flex-1">
+                Ouvre les sites d’achat aux clients pas encore connectés (<strong>walled garden</strong>). Sans ça, ils
+                voient le portail mais ne peuvent pas payer. Dans Winbox, clique sur <strong>New Terminal</strong>, colle
+                ce script et appuie sur Entrée :
+                <pre className="mt-2 max-h-64 overflow-auto rounded-2xl bg-ink p-3 font-mono text-xs leading-relaxed text-white">
+                  {walledGardenScript}
+                </pre>
+                <span className="mt-2 grid gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={copyScript}
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-brand px-4 font-bold text-white transition hover:bg-brand-hover"
+                  >
+                    {scriptCopied ? <CheckIcon className="size-5" /> : null}
+                    {scriptCopied ? 'Script copié' : 'Copier le script'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => download('walled-garden.rsc', walledGardenScript, 'text/plain;charset=utf-8')}
+                    className="flex min-h-11 items-center justify-center gap-2 rounded-2xl border-2 border-brand bg-white px-4 font-bold text-brand transition hover:bg-brand-soft"
+                  >
+                    <DownloadIcon className="size-5" />
+                    walled-garden.rsc
+                  </button>
                 </span>
+                <span className="mt-2 block text-muted">
+                  Tu peux relancer le script autant de fois que tu veux : il remplace ses anciennes lignes, sans doublon.
+                </span>
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span className="grid size-6 shrink-0 place-items-center rounded-full bg-brand text-sm font-bold text-white">3</span>
+              <span>
+                Teste avec un téléphone connecté au WiFi, sans ticket : ouvre « Acheter un ticket » et va jusqu’à la page
+                de paiement. Si une page reste blanche, regarde dans <strong>IP &gt; Hotspot &gt; Hosts</strong> ou dans
+                le <strong>Log</strong> quel site est bloqué.
               </span>
             </li>
           </ol>
