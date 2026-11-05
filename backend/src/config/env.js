@@ -11,10 +11,21 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
+// « https://a.org,https://www.a.org/ » → ['https://a.org', 'https://www.a.org'] ; vide → '*' (toutes).
+function parseCorsOrigin(value) {
+  const origins = (value || '')
+    .split(',')
+    .map((origin) => origin.trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+  if (origins.length === 0) return '*';
+  return origins.length === 1 ? origins[0] : origins;
+}
+
 module.exports = {
   nodeEnv: process.env.NODE_ENV || 'development',
   port: Number(process.env.PORT) || 3000,
-  corsOrigin: process.env.CORS_ORIGIN || '*',
+  // Une ou plusieurs adresses séparées par des virgules (ex : avec et sans www) ; vide = toutes.
+  corsOrigin: parseCorsOrigin(process.env.CORS_ORIGIN),
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   jwtSecret: process.env.JWT_SECRET,
