@@ -14,6 +14,14 @@ export const PAYMENT_HOSTS = [
   ['FedaPay', ['process.fedapay.com', 'checkout.fedapay.com', 'api.fedapay.com', 'cdn.fedapay.com'], ['*.fedapay.com']],
   // Wave passe par Internet (page ou appli Wave) ; Orange, MTN et Moov passent par le réseau mobile (USSD).
   ['Wave', ['pay.wave.com', 'api.wave.com', 'wave.com'], ['*.wave.com']],
+  // Statistiques chargées par la page Moneroo. Le paiement marche sans elles, mais le hotspot
+  // bloque ces sites sans répondre : le téléphone attend alors chaque fois de longues secondes.
+  // Les ouvrir rend la page de paiement beaucoup plus rapide.
+  [
+    'Vitesse page de paiement',
+    ['www.clarity.ms', 'scripts.clarity.ms', 'c.clarity.ms', 'n.clarity.ms', 'c.bing.com', 'o4503979561975808.ingest.sentry.io', 'unavatar.io'],
+    ['*.clarity.ms', '*.ingest.sentry.io'],
+  ],
 ];
 
 const TAG = 'monwifizone';
