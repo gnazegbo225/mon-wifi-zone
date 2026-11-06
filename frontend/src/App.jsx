@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import ProtectedRoute from './auth/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
@@ -12,9 +13,20 @@ import PortalPage from './pages/PortalPage';
 import TicketsPage from './pages/TicketsPage';
 import ZonesPage from './pages/ZonesPage';
 
+// Page d'accueil chargée à part : framer-motion n'alourdit pas les pages d'achat ouvertes sur le hotspot.
+const LandingPage = lazy(() => import('./pages/LandingPage'));
+
 export default function App() {
   return (
     <Routes>
+      <Route
+        path="/"
+        element={
+          <Suspense fallback={<div className="min-h-dvh bg-page" />}>
+            <LandingPage />
+          </Suspense>
+        }
+      />
       <Route path="/login" element={<LoginPage />} />
 
       {/* Parcours client, sans connexion */}
@@ -33,7 +45,7 @@ export default function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
