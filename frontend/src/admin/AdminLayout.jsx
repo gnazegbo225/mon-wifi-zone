@@ -7,6 +7,7 @@ import { useAdminAuth } from './useAdminAuth';
 const MENU = [
   { to: '/admin', label: 'Vue d’ensemble', end: true },
   { to: '/admin/verifications', label: 'Vérifications' },
+  { to: '/admin/retraits', label: 'Retraits' },
 ];
 
 export default function AdminLayout() {

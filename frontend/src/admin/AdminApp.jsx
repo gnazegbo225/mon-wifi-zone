@@ -7,6 +7,8 @@ import AdminLayout from './AdminLayout';
 import AdminLoginPage from './AdminLoginPage';
 import AdminVendorReviewPage from './AdminVendorReviewPage';
 import AdminVerificationsPage from './AdminVerificationsPage';
+import AdminWithdrawalPage from './AdminWithdrawalPage';
+import AdminWithdrawalsPage from './AdminWithdrawalsPage';
 
 export default function AdminApp() {
   return (
@@ -17,6 +19,8 @@ export default function AdminApp() {
           <Route index element={<AdminHomePage />} />
           <Route path="verifications" element={<AdminVerificationsPage />} />
           <Route path="verifications/:id" element={<AdminVendorReviewPage />} />
+          <Route path="retraits" element={<AdminWithdrawalsPage />} />
+          <Route path="retraits/:id" element={<AdminWithdrawalPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/admin" replace />} />
       </Routes>

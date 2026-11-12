@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AlertIcon, ChartIcon, ChevronRightIcon, CoinsIcon, MapPinIcon, TagIcon, TicketIcon } from '../components/icons';
-import { getPricings, getTicketStock, getZones } from '../services/api';
+import { useAuth } from '../auth/useAuth';
+import { getPricings, getTicketStock, getVendorMonthlySales, getZones } from '../services/api';
 
 const priceFormat = new Intl.NumberFormat('fr-FR');
 const monthFormat = new Intl.DateTimeFormat('fr-FR', { month: 'short' });
@@ -150,8 +151,8 @@ function CardHeader({ title, subtitle, action }) {
   );
 }
 
-// Graphique des ventes : pas encore de données côté backend.
-// On montre la forme du futur graphique, en pointillés, avec un message clair.
+// Graphique des ventes des 6 derniers mois (promoteur). Sans vente, ou pour un employé,
+// on montre la forme du graphique en pointillés avec un message clair.
 const GHOST_HEIGHTS = [
   [45, 70],
   [60, 40],
@@ -162,11 +163,45 @@ const GHOST_HEIGHTS = [
 ];
 
 function SalesCard() {
-  const months = lastSixMonths();
+  const { user } = useAuth();
+  const isVendor = user?.role === 'vendor';
+  const [months, setMonths] = useState(null);
+
+  useEffect(() => {
+    if (!isVendor) return undefined;
+    let active = true;
+    getVendorMonthlySales()
+      .then((m) => active && setMonths(m))
+      .catch(() => active && setMonths([]));
+    return () => {
+      active = false;
+    };
+  }, [isVendor]);
+
+  const labels = months?.length
+    ? months.map((m) => monthFormat.format(new Date(`${m.month}-01T00:00:00`)))
+    : lastSixMonths();
+  const hasSales = Boolean(months?.some((m) => m.tickets > 0));
+  const maxTickets = hasSales ? Math.max(...months.map((m) => m.tickets)) : 1;
+  const maxAmount = hasSales ? Math.max(...months.map((m) => m.amount)) : 1;
+  const total = hasSales ? months.reduce((sum, m) => sum + m.amount, 0) : 0;
 
   return (
     <section className="rounded-3xl border border-line bg-white p-4 shadow-[0_4px_16px_-10px_rgba(15,42,92,0.2)] sm:p-5">
-      <CardHeader title="Ventes" subtitle="Suis tes ventes de tickets" />
+      <CardHeader
+        title="Ventes"
+        subtitle={hasSales ? `${priceFormat.format(total)} FCFA sur 6 mois` : 'Suis tes ventes de tickets'}
+        action={
+          isVendor && (
+            <Link
+              to="/espace/finances"
+              className="flex shrink-0 items-center gap-1 rounded-full bg-brand-soft px-3 py-1.5 text-sm font-bold text-brand transition hover:bg-brand hover:text-white"
+            >
+              Finances <ChevronRightIcon className="size-4" />
+            </Link>
+          )
+        }
+      />
 
       <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted">
         <span className="flex items-center gap-2">
@@ -178,36 +213,45 @@ function SalesCard() {
       </div>
 
       <div className="relative mt-4">
-        <div aria-hidden="true" className="flex h-48 items-end justify-between gap-2 border-b border-line px-1 sm:h-56">
-          {GHOST_HEIGHTS.map(([a, b], i) => (
-            <div key={i} className="flex h-full flex-1 items-end justify-center gap-1 sm:gap-1.5">
-              <span
-                className="w-3 rounded-full border-2 border-dashed border-brand/20 sm:w-5"
-                style={{ height: `${a}%` }}
-              />
-              <span
-                className="w-3 rounded-full border-2 border-dashed border-accent/40 sm:w-5"
-                style={{ height: `${b}%` }}
-              />
-            </div>
-          ))}
+        <div className="flex h-48 items-end justify-between gap-2 border-b border-line px-1 sm:h-56">
+          {hasSales
+            ? months.map((m) => (
+                <div
+                  key={m.month}
+                  className="flex h-full flex-1 items-end justify-center gap-1 sm:gap-1.5"
+                  title={`${m.tickets} tickets · ${priceFormat.format(m.amount)} FCFA`}
+                >
+                  <span className="w-3 rounded-full bg-brand sm:w-5" style={{ height: `${Math.max(2, (m.tickets / maxTickets) * 100)}%` }} />
+                  <span className="w-3 rounded-full bg-accent sm:w-5" style={{ height: `${Math.max(2, (m.amount / maxAmount) * 100)}%` }} />
+                </div>
+              ))
+            : GHOST_HEIGHTS.map(([a, b], i) => (
+                <div key={i} aria-hidden="true" className="flex h-full flex-1 items-end justify-center gap-1 sm:gap-1.5">
+                  <span className="w-3 rounded-full border-2 border-dashed border-brand/20 sm:w-5" style={{ height: `${a}%` }} />
+                  <span className="w-3 rounded-full border-2 border-dashed border-accent/40 sm:w-5" style={{ height: `${b}%` }} />
+                </div>
+              ))}
         </div>
         <div aria-hidden="true" className="mt-2 flex justify-between px-1 text-sm text-muted">
-          {months.map((m) => (
-            <span key={m} className="flex-1 text-center">
+          {labels.map((m, i) => (
+            <span key={i} className="flex-1 text-center">
               {m}
             </span>
           ))}
         </div>
 
-        <div className="absolute inset-x-0 top-1/3 flex justify-center px-4">
-          <div className="flex max-w-xs items-center gap-3 rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-[0_10px_30px_-12px_rgba(15,42,92,0.3)] backdrop-blur">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
-              <ChartIcon className="size-5" />
-            </span>
-            <p className="text-sm text-ink">Pas encore de ventes. Elles s'afficheront ici dès le premier ticket vendu.</p>
+        {!hasSales && (
+          <div className="absolute inset-x-0 top-1/3 flex justify-center px-4">
+            <div className="flex max-w-xs items-center gap-3 rounded-2xl border border-line bg-white/95 px-4 py-3 shadow-[0_10px_30px_-12px_rgba(15,42,92,0.3)] backdrop-blur">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+                <ChartIcon className="size-5" />
+              </span>
+              <p className="text-sm text-ink">
+                {isVendor ? 'Pas encore de ventes. Elles s’afficheront ici dès le premier ticket vendu.' : 'Les ventes sont visibles par le promoteur.'}
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   );

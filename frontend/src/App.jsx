@@ -5,6 +5,7 @@ import DashboardLayout from './components/DashboardLayout';
 import AccountPage from './pages/AccountPage';
 import BuyPage from './pages/BuyPage';
 import DashboardHome from './pages/DashboardHome';
+import FinancesPage from './pages/FinancesPage';
 import ForfaitsPage from './pages/ForfaitsPage';
 import LoginPage from './pages/LoginPage';
 import MerciPage from './pages/MerciPage';
@@ -59,6 +60,7 @@ export default function App() {
           <Route path="tickets" element={<TicketsPage />} />
           <Route path="portail" element={<PortalPage />} />
           <Route path="compte" element={<AccountPage />} />
+          <Route path="finances" element={<FinancesPage />} />
         </Route>
       </Route>
 

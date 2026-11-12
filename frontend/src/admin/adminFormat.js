@@ -7,12 +7,7 @@ export const STATUS_LABEL = {
   suspended: 'Suspendu',
 };
 
-export const PAYOUT_LABEL = {
-  wave_ci: 'Wave',
-  orange_ci: 'Orange Money',
-  mtn_ci: 'MTN MoMo',
-  bank_transfer: 'Virement bancaire',
-};
+export { PAYOUT_LABEL, TONE_CLASS, WITHDRAWAL_STATUS } from '../utils/labels';
 
 // Ce que le super admin vérifie avant d'approuver un dossier (mêmes clés que le backend).
 export const CHECKLIST_LABEL = {

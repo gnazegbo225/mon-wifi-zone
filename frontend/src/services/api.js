@@ -239,3 +239,40 @@ export function uploadVendorDocument(kind, file) {
 export function submitVendorProfile() {
   return request('/vendor/profile/submit', { method: 'POST' });
 }
+
+// --- Argent du promoteur ----------------------------------------------------
+
+// { balance: { pending_amount, available_amount, in_withdrawal, withdrawn, gross_sales, commissions },
+//   rules: { commission_percent, min_withdrawal, hold_hours }, account_status, payout_account }
+export function getVendorBalance() {
+  return request('/vendor/balance');
+}
+
+// { sales: [...], totals: { count, gross, commission, net }, page, has_more }
+export function getVendorSales({ page = 1, from, to, zoneId } = {}) {
+  const query = new URLSearchParams({ page: String(page) });
+  if (from) query.set('from', from);
+  if (to) query.set('to', to);
+  if (zoneId) query.set('zone_id', zoneId);
+  return request(`/vendor/sales?${query}`);
+}
+
+// Ventes des 6 derniers mois : [{ month: '2026-11', tickets, amount, net }]
+export async function getVendorMonthlySales() {
+  const data = await request('/vendor/sales/monthly');
+  return data.months;
+}
+
+export async function getVendorWithdrawals() {
+  const data = await request('/vendor/withdrawals');
+  return data.withdrawals;
+}
+
+// Le retrait part vers le compte de retrait vérifié du dossier. Renvoie { withdrawal, balance }.
+export function requestVendorWithdrawal(amount) {
+  return request('/vendor/withdrawals', { method: 'POST', body: { amount } });
+}
+
+export function cancelVendorWithdrawal(id) {
+  return request(`/vendor/withdrawals/${encodeURIComponent(id)}/cancel`, { method: 'POST' });
+}

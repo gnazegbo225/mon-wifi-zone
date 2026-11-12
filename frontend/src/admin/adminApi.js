@@ -96,3 +96,30 @@ export function approveVendor(id, checklist) {
 export function rejectVendor(id, reason, checklist) {
   return request(`/vendors/${encodeURIComponent(id)}/reject`, { method: 'POST', body: { reason, checklist } });
 }
+
+// --- Retraits --------------------------------------------------------------
+
+// status : 'pending', 'approved', 'paid' ou 'rejected,cancelled' → { withdrawals, total }
+export function listWithdrawals(status) {
+  return request(`/withdrawals?status=${encodeURIComponent(status)}`);
+}
+
+// { withdrawal (avec vendor), vendor_balance, events }
+export function getWithdrawal(id) {
+  return request(`/withdrawals/${encodeURIComponent(id)}`);
+}
+
+export function approveWithdrawal(id, note) {
+  return request(`/withdrawals/${encodeURIComponent(id)}/approve`, { method: 'POST', body: { note } });
+}
+
+export function rejectWithdrawal(id, reason) {
+  return request(`/withdrawals/${encodeURIComponent(id)}/reject`, { method: 'POST', body: { reason } });
+}
+
+export function markWithdrawalPaid(id, transferReference, note) {
+  return request(`/withdrawals/${encodeURIComponent(id)}/mark-paid`, {
+    method: 'POST',
+    body: { transfer_reference: transferReference, note },
+  });
+}

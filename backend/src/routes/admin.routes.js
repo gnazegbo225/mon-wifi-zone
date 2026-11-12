@@ -3,6 +3,7 @@ const { Router } = require('express');
 const { rateLimit } = require('express-rate-limit');
 const authController = require('../controllers/admin/auth.controller');
 const vendorsController = require('../controllers/admin/vendors.controller');
+const withdrawalsController = require('../controllers/admin/withdrawals.controller');
 const { requireAdmin } = require('../middlewares/auth');
 
 const router = Router();
@@ -25,5 +26,12 @@ router.get('/vendors', requireAdmin, vendorsController.listVendors);
 router.get('/vendors/:id', requireAdmin, vendorsController.getVendor);
 router.post('/vendors/:id/approve', requireAdmin, vendorsController.approveVendor);
 router.post('/vendors/:id/reject', requireAdmin, vendorsController.rejectVendor);
+
+// Retraits : approuver, rejeter, marquer payé (avec la référence du transfert).
+router.get('/withdrawals', requireAdmin, withdrawalsController.listWithdrawals);
+router.get('/withdrawals/:id', requireAdmin, withdrawalsController.getWithdrawal);
+router.post('/withdrawals/:id/approve', requireAdmin, withdrawalsController.approveWithdrawal);
+router.post('/withdrawals/:id/reject', requireAdmin, withdrawalsController.rejectWithdrawal);
+router.post('/withdrawals/:id/mark-paid', requireAdmin, withdrawalsController.markWithdrawalPaid);
 
 module.exports = router;

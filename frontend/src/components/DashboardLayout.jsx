@@ -2,14 +2,15 @@ import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import logoMark from '../assets/logo-mark.svg';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../auth/useAuth';
-import { AlertIcon, HomeIcon, LogoutIcon, MapPinIcon, TagIcon, TicketIcon, UserIcon, WifiIcon } from './icons';
+import { AlertIcon, CoinsIcon, HomeIcon, LogoutIcon, MapPinIcon, TagIcon, TicketIcon, UserIcon, WifiIcon } from './icons';
 
 const MENU = [
   { to: '/espace', label: 'Tableau de bord', short: 'Accueil', icon: HomeIcon, end: true },
   { to: '/espace/zones', label: 'Zones', short: 'Zones', icon: MapPinIcon },
   { to: '/espace/forfaits', label: 'Forfaits', short: 'Forfaits', icon: TagIcon, vendorOnly: true },
   { to: '/espace/tickets', label: 'Tickets', short: 'Tickets', icon: TicketIcon },
-  { to: '/espace/portail', label: 'Portail captif', short: 'Portail', icon: WifiIcon, vendorOnly: true },
+  { to: '/espace/portail', label: 'Portail captif', short: 'Portail', icon: WifiIcon, vendorOnly: true, desktopOnly: true },
+  { to: '/espace/finances', label: 'Finances', short: 'Argent', icon: CoinsIcon, vendorOnly: true },
   { to: '/espace/compte', label: 'Mon compte', short: 'Compte', icon: UserIcon, vendorOnly: true },
 ];
 
@@ -19,6 +20,7 @@ const PAGES = {
   '/espace/portail': { title: 'Portail captif', subtitle: 'Crée la page de connexion WiFi de tes routeurs.' },
   '/espace/tickets': { title: 'Tickets', subtitle: 'Importe tes tickets MikroTik et suis ton stock.' },
   '/espace/compte': { title: 'Mon compte', subtitle: 'Ton dossier de vérification et ton compte de retrait.' },
+  '/espace/finances': { title: 'Finances', subtitle: 'Ton solde, tes retraits et tes ventes.' },
 };
 
 // Rappel tant que le compte du promoteur n'est pas vérifié (sauf sur la page Mon compte).
@@ -63,6 +65,8 @@ export default function DashboardLayout() {
   const { user, signOut } = useAuth();
   // Forfaits et portail captif : le promoteur seulement, pas ses employés.
   const menu = MENU.filter((item) => !item.vendorOnly || user?.role === 'vendor');
+  // Barre du bas (téléphone) : sans le portail captif, qui se prépare sur ordinateur (fichiers du routeur).
+  const mobileMenu = menu.filter((item) => !item.desktopOnly);
   const { pathname } = useLocation();
 
   const firstName = user?.full_name?.trim().split(/\s+/)[0] || '';
@@ -170,8 +174,8 @@ export default function DashboardLayout() {
         aria-label="Menu principal"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
       >
-        <ul className="grid" style={{ gridTemplateColumns: `repeat(${menu.length}, minmax(0, 1fr))` }}>
-          {menu.map(({ to, short, icon: Icon, end }) => (
+        <ul className="grid" style={{ gridTemplateColumns: `repeat(${mobileMenu.length}, minmax(0, 1fr))` }}>
+          {mobileMenu.map(({ to, short, icon: Icon, end }) => (
             <li key={to}>
               <NavLink
                 to={to}

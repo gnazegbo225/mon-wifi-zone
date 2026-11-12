@@ -990,3 +990,71 @@ Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 { "reason": "La photo du recto de la CNI est floue.", "checklist": { "id_readable": false } }
+
+
+# =============================================================================
+# Argent du promoteur (connexion promoteur : @token)
+# =============================================================================
+
+### Solde : disponible, en attente (24 h), retrait en cours, déjà retiré + règles et compte de retrait -> 200
+GET {{baseUrl}}/vendor/balance
+Authorization: Bearer {{token}}
+
+### Ventes, 20 par page, avec les totaux de la période (numéros des clients masqués) -> 200
+GET {{baseUrl}}/vendor/sales?page=1&from=2026-11-01&to=2026-11-30
+Authorization: Bearer {{token}}
+
+### Ventes des 6 derniers mois (graphique) -> 200
+GET {{baseUrl}}/vendor/sales/monthly
+Authorization: Bearer {{token}}
+
+### Demande de retrait -> 201 ; vers le compte de retrait vérifié du dossier (pas d'autre destination)
+# 400 « Le retrait minimum est de 1 000 F. » · 400 « Tu peux retirer au plus … » · 403 compte non vérifié
+# @name withdrawal
+POST {{baseUrl}}/vendor/withdrawals
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "amount": 1000 }
+
+### Mes retraits -> 200
+GET {{baseUrl}}/vendor/withdrawals
+Authorization: Bearer {{token}}
+
+### Annuler un retrait encore en attente -> 200 (le montant revient au disponible)
+POST {{baseUrl}}/vendor/withdrawals/{{withdrawal.response.body.$.withdrawal.id}}/cancel
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
+# Retraits côté super admin (@adminToken)
+# =============================================================================
+
+### À approuver (pending), à payer (approved), payés (paid), rejetés et annulés (rejected,cancelled) -> 200
+GET {{baseUrl}}/admin/withdrawals?status=pending
+Authorization: Bearer {{adminToken}}
+
+### Détail : destination, solde du promoteur, historique -> 200 ; remplace l'id
+GET {{baseUrl}}/admin/withdrawals/ID_DU_RETRAIT
+Authorization: Bearer {{adminToken}}
+
+### Approuver -> 200
+POST {{baseUrl}}/admin/withdrawals/ID_DU_RETRAIT/approve
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{}
+
+### Marquer payé, après le transfert -> 200 ; référence obligatoire (400 sinon), seulement après approbation (409 sinon)
+POST {{baseUrl}}/admin/withdrawals/ID_DU_RETRAIT/mark-paid
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "transfer_reference": "WAVE-XXXX", "note": "Envoyé depuis le compte pro" }
+
+### Rejeter avec un motif (le promoteur le voit, le montant lui revient) -> 200
+POST {{baseUrl}}/admin/withdrawals/ID_DU_RETRAIT/reject
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "reason": "Numéro injoignable : appelle-nous." }

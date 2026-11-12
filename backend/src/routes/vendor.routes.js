@@ -2,6 +2,7 @@
 const { Router } = require('express');
 const multer = require('multer');
 const { getProfile, updateProfile, uploadProfileDocument, submitProfile } = require('../controllers/vendor.controller');
+const finance = require('../controllers/vendorFinance.controller');
 const { requireAuth, requireRole } = require('../middlewares/auth');
 
 const router = Router();
@@ -29,5 +30,13 @@ router.get('/profile', getProfile);
 router.put('/profile', updateProfile);
 router.post('/profile/documents/:kind', receivePhoto, uploadProfileDocument);
 router.post('/profile/submit', submitProfile);
+
+// Argent : solde, ventes, retraits.
+router.get('/balance', finance.getMyBalance);
+router.get('/sales', finance.listSales);
+router.get('/sales/monthly', finance.monthlySales);
+router.get('/withdrawals', finance.listMyWithdrawals);
+router.post('/withdrawals', finance.createWithdrawal);
+router.post('/withdrawals/:id/cancel', finance.cancelWithdrawal);
 
 module.exports = router;
