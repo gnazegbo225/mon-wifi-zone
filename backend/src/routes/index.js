@@ -7,6 +7,7 @@ const authRoutes = require('./auth.routes');
 const ticketsRoutes = require('./tickets.routes');
 const publicRoutes = require('./public.routes');
 const adminRoutes = require('./admin.routes');
+const vendorRoutes = require('./vendor.routes');
 
 const router = Router();
 
@@ -17,5 +18,6 @@ router.use('/auth', authRoutes);
 router.use('/tickets', ticketsRoutes);
 router.use('/public', publicRoutes);
 router.use('/admin', adminRoutes);
+router.use('/vendor', vendorRoutes);
 
 module.exports = router;

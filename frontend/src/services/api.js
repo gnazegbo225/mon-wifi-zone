@@ -204,3 +204,38 @@ export async function createPaymentIntent({ zoneId, pricingId, phone }) {
 export async function getPaymentStatus(paymentId) {
   return request(`/public/payments/${encodeURIComponent(paymentId)}`, { auth: false });
 }
+
+// --- Inscription et dossier du promoteur --------------------------------------
+
+// Pays ouverts aux inscriptions : [{ code, name }].
+export async function getCountries() {
+  const data = await request('/auth/countries', { auth: false });
+  return data.countries;
+}
+
+// account : { full_name, email, password, phone, country }. Connecte le promoteur tout de suite.
+export async function register(account) {
+  const data = await request('/auth/register', { method: 'POST', body: account, auth: false });
+  saveToken(data.token, true);
+  return data.user;
+}
+
+// { account_status, editable, submitted_at, rejection_reason, profile, documents: { id_front, id_back, selfie } }
+export function getVendorProfile() {
+  return request('/vendor/profile');
+}
+
+export function updateVendorProfile(fields) {
+  return request('/vendor/profile', { method: 'PUT', body: fields });
+}
+
+// kind : id_front | id_back | selfie
+export function uploadVendorDocument(kind, file) {
+  const form = new FormData();
+  form.append('file', file);
+  return request(`/vendor/profile/documents/${encodeURIComponent(kind)}`, { method: 'POST', body: form });
+}
+
+export function submitVendorProfile() {
+  return request('/vendor/profile/submit', { method: 'POST' });
+}

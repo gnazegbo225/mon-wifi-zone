@@ -72,3 +72,27 @@ export async function getAdminMe() {
   const data = await request('/auth/me');
   return data.user;
 }
+
+// --- Promoteurs et vérification ---------------------------------------------
+
+// params : { status, submitted } → [{ id, full_name, email, phone, account_status, submitted_at, … }]
+export async function listVendors({ status, submitted } = {}) {
+  const query = new URLSearchParams();
+  if (status) query.set('status', status);
+  if (submitted) query.set('submitted', 'true');
+  const data = await request(`/vendors${query.size ? `?${query}` : ''}`);
+  return data.vendors;
+}
+
+// { vendor, profile, documents: { id_front, id_back, selfie } (liens temporaires), checklist, events }
+export function getVendor(id) {
+  return request(`/vendors/${encodeURIComponent(id)}`);
+}
+
+export function approveVendor(id, checklist) {
+  return request(`/vendors/${encodeURIComponent(id)}/approve`, { method: 'POST', body: { checklist } });
+}
+
+export function rejectVendor(id, reason, checklist) {
+  return request(`/vendors/${encodeURIComponent(id)}/reject`, { method: 'POST', body: { reason, checklist } });
+}

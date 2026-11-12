@@ -29,12 +29,29 @@ export default function AuthProvider({ children }) {
     return loggedUser;
   }, []);
 
+  // Inscription d'un promoteur : il est connecté tout de suite.
+  const signUp = useCallback(async (account) => {
+    const newUser = await api.register(account);
+    setUser(newUser);
+    return newUser;
+  }, []);
+
+  // Relit le compte (ex : statut de vérification qui a changé).
+  const refreshUser = useCallback(async () => {
+    const fresh = await api.getMe();
+    setUser(fresh);
+    return fresh;
+  }, []);
+
   const signOut = useCallback(() => {
     api.logout();
     setUser(null);
   }, []);
 
-  const value = useMemo(() => ({ user, status, signIn, signOut }), [user, status, signIn, signOut]);
+  const value = useMemo(
+    () => ({ user, status, signIn, signUp, refreshUser, signOut }),
+    [user, status, signIn, signUp, refreshUser, signOut],
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

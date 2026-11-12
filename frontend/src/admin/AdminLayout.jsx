@@ -4,7 +4,10 @@ import logo from '../assets/logo.svg';
 import Spinner from '../components/Spinner';
 import { useAdminAuth } from './useAdminAuth';
 
-const MENU = [{ to: '/admin', label: 'Vue d’ensemble', end: true }];
+const MENU = [
+  { to: '/admin', label: 'Vue d’ensemble', end: true },
+  { to: '/admin/verifications', label: 'Vérifications' },
+];
 
 export default function AdminLayout() {
   const { admin, status, signOut } = useAdminAuth();

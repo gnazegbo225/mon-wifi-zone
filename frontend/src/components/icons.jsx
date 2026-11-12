@@ -230,3 +230,21 @@ export function ChevronRightIcon(props) {
     </Icon>
   );
 }
+
+export function UserIcon(props) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" />
+    </Icon>
+  );
+}
+
+export function CameraIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M4 8h3l2-3h6l2 3h3v11H4z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </Icon>
+  );
+}

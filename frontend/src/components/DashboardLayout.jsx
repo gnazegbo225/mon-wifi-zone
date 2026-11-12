@@ -1,8 +1,8 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import logoMark from '../assets/logo-mark.svg';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../auth/useAuth';
-import { HomeIcon, LogoutIcon, MapPinIcon, TagIcon, TicketIcon, WifiIcon } from './icons';
+import { AlertIcon, HomeIcon, LogoutIcon, MapPinIcon, TagIcon, TicketIcon, UserIcon, WifiIcon } from './icons';
 
 const MENU = [
   { to: '/espace', label: 'Tableau de bord', short: 'Accueil', icon: HomeIcon, end: true },
@@ -10,6 +10,7 @@ const MENU = [
   { to: '/espace/forfaits', label: 'Forfaits', short: 'Forfaits', icon: TagIcon, vendorOnly: true },
   { to: '/espace/tickets', label: 'Tickets', short: 'Tickets', icon: TicketIcon },
   { to: '/espace/portail', label: 'Portail captif', short: 'Portail', icon: WifiIcon, vendorOnly: true },
+  { to: '/espace/compte', label: 'Mon compte', short: 'Compte', icon: UserIcon, vendorOnly: true },
 ];
 
 const PAGES = {
@@ -17,7 +18,30 @@ const PAGES = {
   '/espace/forfaits': { title: 'Forfaits', subtitle: 'Crée et gère les tarifs que tes clients achètent.' },
   '/espace/portail': { title: 'Portail captif', subtitle: 'Crée la page de connexion WiFi de tes routeurs.' },
   '/espace/tickets': { title: 'Tickets', subtitle: 'Importe tes tickets MikroTik et suis ton stock.' },
+  '/espace/compte': { title: 'Mon compte', subtitle: 'Ton dossier de vérification et ton compte de retrait.' },
 };
+
+// Rappel tant que le compte du promoteur n'est pas vérifié (sauf sur la page Mon compte).
+function VerificationBanner({ user, pathname }) {
+  if (user?.role !== 'vendor' || user.account_status === 'approved' || pathname.startsWith('/espace/compte')) return null;
+  const rejected = user.account_status === 'rejected';
+  return (
+    <Link
+      to="/espace/compte"
+      className={`mb-5 flex items-start gap-3 rounded-2xl px-4 py-3 text-sm transition hover:brightness-[0.98] ${
+        rejected ? 'bg-danger-soft text-danger' : 'bg-brand-soft text-brand'
+      }`}
+    >
+      <AlertIcon className="mt-px size-5 shrink-0" />
+      <span>
+        {rejected
+          ? 'Ton dossier doit être corrigé avant ton premier retrait. '
+          : 'Ton compte n’est pas encore vérifié. Envoie ton dossier pour pouvoir retirer ton argent. '}
+        <span className="font-bold underline underline-offset-2">Mon compte</span>
+      </span>
+    </Link>
+  );
+}
 
 const ROLE_LABEL = { vendor: 'Promoteur', employee: 'Employé' };
 
@@ -136,6 +160,7 @@ export default function DashboardLayout() {
             </div>
           </div>
 
+          <VerificationBanner user={user} pathname={pathname} />
           <Outlet />
         </main>
       </div>

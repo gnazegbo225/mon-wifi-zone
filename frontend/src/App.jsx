@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import ProtectedRoute from './auth/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
+import AccountPage from './pages/AccountPage';
 import BuyPage from './pages/BuyPage';
 import DashboardHome from './pages/DashboardHome';
 import ForfaitsPage from './pages/ForfaitsPage';
@@ -10,6 +11,7 @@ import MerciPage from './pages/MerciPage';
 import PaymentFailedPage from './pages/PaymentFailedPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PortalPage from './pages/PortalPage';
+import RegisterPage from './pages/RegisterPage';
 import TicketsPage from './pages/TicketsPage';
 import ZonesPage from './pages/ZonesPage';
 
@@ -39,6 +41,7 @@ export default function App() {
       />
       {/* Espace promoteur */}
       <Route path="/connexion" element={<LoginPage />} />
+      <Route path="/inscription" element={<RegisterPage />} />
       <Route path="/login" element={<Navigate to="/connexion" replace />} />
       <Route path="/dashboard/*" element={<DashboardRedirect />} />
 
@@ -55,6 +58,7 @@ export default function App() {
           <Route path="forfaits" element={<ForfaitsPage />} />
           <Route path="tickets" element={<TicketsPage />} />
           <Route path="portail" element={<PortalPage />} />
+          <Route path="compte" element={<AccountPage />} />
         </Route>
       </Route>
 

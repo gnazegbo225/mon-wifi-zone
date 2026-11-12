@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import logoMark from '../assets/logo-mark.svg';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../auth/useAuth';
@@ -173,14 +173,17 @@ export default function LoginPage() {
           </button>
 
           <p className="pt-1 text-center text-sm text-muted">
-            Mot de passe oublié ? Demande à ton administrateur.
+            Pas encore de compte ?{' '}
+            <Link to="/inscription" className="font-bold text-brand underline underline-offset-2">
+              Deviens promoteur
+            </Link>
           </p>
         </form>
       </main>
 
       <footer className="flex flex-col items-center gap-2 px-5 pt-2 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
         <img src={logo} alt="monwifizone" className="h-7 w-auto" />
-        <p className="text-sm text-muted">Ton espace vendeur</p>
+        <p className="text-sm text-muted">Ton espace promoteur</p>
       </footer>
     </div>
   );

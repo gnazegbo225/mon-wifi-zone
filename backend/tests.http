@@ -909,3 +909,84 @@ Content-Type: application/json
 
 ### Après 5 mauvais mots de passe, le compte est bloqué 15 minutes -> 429 « Trop d'essais »
 # (relance la requête « Mauvais mot de passe » 5 fois, puis la connexion normale)
+
+
+# =============================================================================
+# Inscription d'un promoteur et dossier de vérification (migration 008)
+# =============================================================================
+
+### Pays ouverts aux inscriptions -> 200 { countries: [{ code: "CI", … }] }
+GET {{baseUrl}}/auth/countries
+
+### Inscription -> 201 { token, user } (account_status = pending_review) ; remplace l'email à chaque essai
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "full_name": "Promoteur Test",
+  "email": "promoteur.test@example.com",
+  "password": "motdepasse-test",
+  "phone": "07 07 07 07 07",
+  "country": "CI"
+}
+
+### Inscription hors Côte d'Ivoire -> 400 (field: country)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{ "full_name": "X", "email": "x@example.com", "password": "motdepasse-test", "phone": "0707070707", "country": "SN" }
+
+### Mon dossier -> 200 { account_status, editable, profile, documents }
+GET {{baseUrl}}/vendor/profile
+Authorization: Bearer {{register.response.body.$.token}}
+
+### Compléter le dossier (en plusieurs fois si besoin) -> 200
+PUT {{baseUrl}}/vendor/profile
+Authorization: Bearer {{register.response.body.$.token}}
+Content-Type: application/json
+
+{
+  "city": "Soubré",
+  "id_number": "CI0012345678",
+  "payout_method": "wave_ci",
+  "payout_phone": "07 07 07 07 07"
+}
+
+### Photo du recto de la CNI (id_front, id_back ou selfie) -> 200 ; JPEG, PNG ou WebP, 5 Mo maximum
+POST {{baseUrl}}/vendor/profile/documents/id_front
+Authorization: Bearer {{register.response.body.$.token}}
+Content-Type: multipart/form-data; boundary=----Photo
+
+------Photo
+Content-Disposition: form-data; name="file"; filename="cni-recto.jpg"
+Content-Type: image/jpeg
+
+< ./test-data/cni-recto.jpg
+------Photo--
+
+### Envoyer le dossier -> 200, ou 400 « Il manque encore : … » (missing: [...])
+POST {{baseUrl}}/vendor/profile/submit
+Authorization: Bearer {{register.response.body.$.token}}
+
+### Super admin : dossiers à vérifier, les plus anciens d'abord -> 200
+GET {{baseUrl}}/admin/vendors?status=pending_review&submitted=true
+Authorization: Bearer {{adminToken}}
+
+### Super admin : fiche d'un promoteur (liens temporaires vers les photos, 5 min) -> 200 ; remplace l'id
+GET {{baseUrl}}/admin/vendors/ID_DU_PROMOTEUR
+Authorization: Bearer {{adminToken}}
+
+### Super admin : approuver (tous les points cochés) -> 200
+POST {{baseUrl}}/admin/vendors/ID_DU_PROMOTEUR/approve
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "checklist": { "id_readable": true, "name_matches": true, "selfie_matches": true, "payout_matches": true } }
+
+### Super admin : rejeter avec un motif (le promoteur le voit) -> 200
+POST {{baseUrl}}/admin/vendors/ID_DU_PROMOTEUR/reject
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "reason": "La photo du recto de la CNI est floue.", "checklist": { "id_readable": false } }

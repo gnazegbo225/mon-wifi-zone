@@ -45,6 +45,9 @@ export default function LandingPage() {
   const { user } = useAuth();
   const spaceLink = user ? '/espace' : '/connexion';
   const spaceLabel = user ? 'Mon tableau de bord' : 'Espace gérant';
+  // Bouton principal : s'inscrire si on n'a pas encore de compte.
+  const ctaLink = user ? '/espace' : '/inscription';
+  const ctaLabel = user ? 'Mon tableau de bord' : 'Devenir promoteur';
 
   return (
     <MotionConfig reducedMotion="user">
@@ -83,10 +86,10 @@ export default function LandingPage() {
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-8">
               <Link
-                to={spaceLink}
+                to={ctaLink}
                 className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:bg-brand-hover"
               >
-                {spaceLabel}
+                {ctaLabel}
               </Link>
               <a href="#services" className="font-bold text-brand transition hover:text-brand-hover">
                 Découvrir ›
@@ -253,10 +256,10 @@ export default function LandingPage() {
               Ta zone, ouverte jour et nuit.
             </h2>
             <Link
-              to={spaceLink}
+              to={ctaLink}
               className="mt-10 inline-block rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:bg-brand-hover"
             >
-              {spaceLabel}
+              {ctaLabel}
             </Link>
           </Reveal>
         </section>
