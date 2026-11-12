@@ -2,17 +2,23 @@
 # Clique sur « Send Request » au-dessus de chaque requête, dans l'ordre :
 # la connexion et la création remplissent les variables utilisées plus bas.
 #
-# Remplace @adminPassword par ton mot de passe, mais NE COMMITE JAMAIS ce fichier avec.
+# Remplace les mots de passe par les tiens, mais NE COMMITE JAMAIS ce fichier avec.
+# Espace promoteur : compte « vendor » (ton compte actuel est devenu promoteur avec la migration 006).
+# Espace super admin : compte créé par scripts/create-super-admin.js.
 
 @baseUrl = http://localhost:3000/api
 @adminEmail = lumafrik1@gmail.com
 @adminPassword = TON_MOT_DE_PASSE
+@superAdminEmail = ADRESSE_SUPER_ADMIN
+@superAdminPassword = MOT_DE_PASSE_SUPER_ADMIN
 
 @token = {{login.response.body.$.token}}
 @zoneId = {{createZone.response.body.$.zone.id}}
 @pricingId = {{createPricing.response.body.$.pricing.id}}
 @pricing1hId = {{pricing1h.response.body.$.pricing.id}}
 @intentPaymentId = {{intent.response.body.$.payment_id}}
+@mfaToken = {{adminLogin.response.body.$.mfa_token}}
+@adminToken = {{adminMfa.response.body.$.token}}
 
 
 ### Santé du serveur -> 200 { ok: true }
@@ -23,7 +29,7 @@ GET {{baseUrl}}/health
 # Authentification
 # =============================================================================
 
-### Connexion admin -> 200 { token, user }
+### Connexion promoteur -> 200 { token, user } (user.role = vendor, user.account_status)
 # @name login
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
@@ -57,13 +63,13 @@ GET {{baseUrl}}/auth/me
 ### Public : zones actives seulement -> 200
 GET {{baseUrl}}/zones
 
-### Admin : toutes les zones, avec is_active et stats (forfaits et tickets reliés) -> 200
+### Promoteur : SES zones (actives et désactivées), avec is_active et stats -> 200
 GET {{baseUrl}}/zones
 Authorization: Bearer {{token}}
 
 
 # =============================================================================
-# Zones : création (admin)
+# Zones : création (promoteur)
 # =============================================================================
 
 ### Créer une zone valide (remplit @zoneId) -> 201 { zone } ; le pays « ci » devient « CI »
@@ -209,7 +215,7 @@ Content-Type: application/json
 
 
 # =============================================================================
-# Zones : modification (admin)
+# Zones : modification (promoteur)
 # =============================================================================
 
 ### Modifier la zone créée plus haut -> 200 { zone }
@@ -246,7 +252,7 @@ Content-Type: application/json
 ### Public : forfaits actifs seulement, sans ticket_profile -> 200
 GET {{baseUrl}}/pricings
 
-### Admin : tous les forfaits (actifs + désactivés), avec ticket_profile et is_active -> 200
+### Promoteur : les forfaits de SES zones (actifs + désactivés), avec ticket_profile et is_active -> 200
 GET {{baseUrl}}/pricings
 Authorization: Bearer {{token}}
 
@@ -263,7 +269,7 @@ Authorization: Bearer abc
 
 
 # =============================================================================
-# Forfaits : création (admin)
+# Forfaits : création (promoteur)
 # =============================================================================
 
 ### Créer un forfait valide (remplit @pricingId) -> 201 { pricing }
@@ -417,7 +423,7 @@ Content-Type: application/json
 
 
 # =============================================================================
-# Forfaits : modification (admin)
+# Forfaits : modification (promoteur)
 # =============================================================================
 
 ### Modifier le forfait créé plus haut -> 200 { pricing }
@@ -462,7 +468,7 @@ Content-Type: application/json
 
 
 # =============================================================================
-# Forfaits : activer / désactiver (admin). Pas de suppression.
+# Forfaits : activer / désactiver (promoteur). Pas de suppression.
 # =============================================================================
 
 ### Désactiver -> 200 { pricing: { is_active: false } }
@@ -495,7 +501,7 @@ Authorization: Bearer {{token}}
 
 
 # =============================================================================
-# Zones : activer / désactiver (admin). Pas de suppression.
+# Zones : activer / désactiver (promoteur). Pas de suppression.
 # Quand une zone est désactivée, ses forfaits ne sont plus proposés aux clients.
 # =============================================================================
 
@@ -566,7 +572,7 @@ Authorization: Bearer {{token}}
 
 
 # =============================================================================
-# Tickets : import CSV (admin) et stock
+# Tickets : import CSV (promoteur) et stock
 # Les fichiers d'exemple sont dans backend/test-data/.
 # On crée d'abord deux forfaits avec les profils utilisés dans ces fichiers (1h et 24h).
 # =============================================================================
@@ -843,3 +849,63 @@ Content-Type: application/json
 X-Moneroo-Signature: 0000000000000000000000000000000000000000000000000000000000000000
 
 { "event": "payment.success", "data": { "id": "py_faux" } }
+
+
+# =============================================================================
+# Espace super admin (/api/admin) : mot de passe, puis code à 6 chiffres
+# Indépendant de l'espace promoteur : autre secret de jeton, autre audience.
+# =============================================================================
+
+### 1. Mot de passe -> 200 { mfa_required: true, mfa_token } (pas encore de jeton admin)
+# @name adminLogin
+POST {{baseUrl}}/admin/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{superAdminEmail}}",
+  "password": "{{superAdminPassword}}"
+}
+
+### 2. Code de l'application d'authentification -> 200 { token, user } ; remplace 000000 par le code affiché
+# Un même code ne sert qu'une fois (« Ce code a déjà servi. Attends le suivant. »).
+# @name adminMfa
+POST {{baseUrl}}/admin/auth/mfa
+Content-Type: application/json
+
+{
+  "mfa_token": "{{mfaToken}}",
+  "code": "000000"
+}
+
+### Compte super admin -> 200 { user }
+GET {{baseUrl}}/admin/auth/me
+Authorization: Bearer {{adminToken}}
+
+### Jeton promoteur dans l'espace admin -> 401
+GET {{baseUrl}}/admin/auth/me
+Authorization: Bearer {{token}}
+
+### Jeton admin dans l'espace promoteur -> 401
+GET {{baseUrl}}/zones
+Authorization: Bearer {{adminToken}}
+
+### Super admin par la connexion promoteur -> 401 « Identifiants incorrects »
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{superAdminEmail}}",
+  "password": "{{superAdminPassword}}"
+}
+
+### Promoteur par la connexion admin -> 401 « Identifiants incorrects »
+POST {{baseUrl}}/admin/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{adminEmail}}",
+  "password": "{{adminPassword}}"
+}
+
+### Après 5 mauvais mots de passe, le compte est bloqué 15 minutes -> 429 « Trop d'essais »
+# (relance la requête « Mauvais mot de passe » 5 fois, puis la connexion normale)

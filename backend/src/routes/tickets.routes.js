@@ -38,7 +38,8 @@ function receiveCsv(req, res, next) {
   });
 }
 
-router.post('/import', requireAuth, requireRole('admin'), receiveCsv, importTickets);
-router.get('/stock', requireAuth, getStock);
+// Promoteur et employé : toujours dans les zones du promoteur (voir middlewares/scope.js).
+router.post('/import', requireAuth, requireRole('vendor', 'employee'), receiveCsv, importTickets);
+router.get('/stock', requireAuth, requireRole('vendor', 'employee'), getStock);
 
 module.exports = router;

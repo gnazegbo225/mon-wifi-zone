@@ -1,4 +1,5 @@
 const supabase = require('../config/supabase');
+const { ownedZone, ownedZoneIds } = require('../middlewares/scope');
 const { parseCsv, isBlankRecord } = require('../utils/csv');
 const { whereTicketStatus } = require('../utils/ticketStatus');
 
@@ -54,7 +55,7 @@ function readTicketRows(text) {
   return { valid, invalid };
 }
 
-// POST /api/tickets/import (admin)
+// POST /api/tickets/import (promoteur ou employé, dans les zones du promoteur)
 // multipart/form-data : file (le CSV) + zone_id.
 // Chaque ticket est rattaché au forfait de la zone dont le ticket_profile est égal à son profil.
 // Un ticket sans forfait correspondant n'est pas importé. Rien n'est jamais écrasé.
@@ -67,8 +68,7 @@ async function importTickets(req, res) {
     return res.status(400).json({ error: 'Ajoute un fichier CSV.', field: 'file' });
   }
 
-  const { data: zone, error: zoneError } = await supabase.from('wifi_zones').select('id').eq('id', zoneId).maybeSingle();
-  if (zoneError) throw zoneError;
+  const zone = await ownedZone(req, zoneId, 'id');
   if (!zone) return res.status(400).json({ error: 'Cette zone WiFi n’existe pas.', field: 'zone_id' });
 
   const { valid, invalid, error } = readTicketRows(req.file.buffer.toString('utf8'));
@@ -148,7 +148,7 @@ async function importTickets(req, res) {
   });
 }
 
-// GET /api/tickets/stock (connecté) : nombre de tickets par forfait et par statut.
+// GET /api/tickets/stock (espace promoteur) : nombre de tickets par forfait et par statut, zones du promoteur seulement.
 // Filtre optionnel : ?zone_id=<uuid>. Ne renvoie jamais les identifiants des tickets.
 async function getStock(req, res) {
   const { zone_id: zoneId } = req.query;
@@ -156,9 +156,13 @@ async function getStock(req, res) {
     return res.status(400).json({ error: 'zone_id invalide' });
   }
 
+  const zoneIds = await ownedZoneIds(req);
+  if (zoneIds.length === 0) return res.json({ stock: [] });
+
   let query = supabase
     .from('pricings')
     .select('id, wifi_zone_id, name, amount, is_active')
+    .in('wifi_zone_id', zoneIds)
     .order('wifi_zone_id')
     .order('amount', { ascending: true });
   if (zoneId) query = query.eq('wifi_zone_id', zoneId);

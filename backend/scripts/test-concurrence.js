@@ -30,7 +30,7 @@ async function main() {
 
   try {
     // --- Préparation : une zone, un forfait, 5 tickets libres ---------------
-    const owner = await must(supabase.from('users').select('id').eq('role', 'admin').limit(1).single());
+    const owner = await must(supabase.from('users').select('id').eq('role', 'vendor').eq('country', 'CI').limit(1).single());
 
     const zone = await must(
       supabase

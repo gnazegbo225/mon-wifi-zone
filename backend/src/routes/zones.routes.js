@@ -4,12 +4,12 @@ const { requireAuth, optionalAuth, requireRole } = require('../middlewares/auth'
 
 const router = Router();
 
-// Lecture publique (parcours client). Un admin connecté voit aussi les zones désactivées.
+// Lecture publique (parcours client). Dans l'espace promoteur : les zones du promoteur, désactivées comprises.
 router.get('/', optionalAuth, listZones);
 
-// Écriture : admin seulement. Pas de DELETE : on désactive au lieu de supprimer.
-router.post('/', requireAuth, requireRole('admin'), createZone);
-router.put('/:id', requireAuth, requireRole('admin'), updateZone);
-router.patch('/:id/status', requireAuth, requireRole('admin'), setZoneStatus);
+// Écriture : le promoteur seulement (pas ses employés). Pas de DELETE : on désactive au lieu de supprimer.
+router.post('/', requireAuth, requireRole('vendor'), createZone);
+router.put('/:id', requireAuth, requireRole('vendor'), updateZone);
+router.patch('/:id/status', requireAuth, requireRole('vendor'), setZoneStatus);
 
 module.exports = router;

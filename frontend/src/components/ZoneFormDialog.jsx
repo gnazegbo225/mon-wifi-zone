@@ -29,7 +29,7 @@ function validate(values) {
 
 function messageForError(err) {
   if (err?.status === 0) return 'Le serveur ne répond pas. Vérifie ta connexion et réessaie.';
-  if (err?.status === 403) return 'Seul un administrateur peut gérer les zones.';
+  if (err?.status === 403) return 'Seul le promoteur peut gérer les zones.';
   if (err?.status === 404) return 'Cette zone n’existe plus. Ferme et recharge la page.';
   if (err?.status === 400) return err.message;
   return 'Un souci de notre côté. Réessaie dans un instant.';

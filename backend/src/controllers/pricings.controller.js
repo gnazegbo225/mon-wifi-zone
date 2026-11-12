@@ -1,11 +1,14 @@
 const supabase = require('../config/supabase');
+const { ownedZone, ownedZoneIds } = require('../middlewares/scope');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_AMOUNT = 2147483647; // Plus grand entier accepté par la colonne integer.
 
 // Colonnes visibles par tout le monde. ticket_profile (profil MikroTik) reste interne.
 const PUBLIC_COLUMNS = 'id, wifi_zone_id, name, amount, duration_label, speed_label';
-const ADMIN_COLUMNS = `${PUBLIC_COLUMNS}, ticket_profile, is_active`;
+const OWNER_COLUMNS = `${PUBLIC_COLUMNS}, ticket_profile, is_active`;
+
+const NOT_FOUND = { error: 'Forfait introuvable' };
 
 function badRequest(res, field, message) {
   return res.status(400).json({ error: message, field });
@@ -60,10 +63,11 @@ function validatePricing(body) {
   };
 }
 
-// Renvoie { id, is_active } ou null si la zone n'existe pas.
-async function findZone(zoneId) {
-  const { data, error } = await supabase.from('wifi_zones').select('id, is_active').eq('id', zoneId).maybeSingle();
+// Le forfait s'il est dans une zone du promoteur connecté, sinon null.
+async function ownedPricing(req, id, columns) {
+  const { data, error } = await supabase.from('pricings').select(columns).eq('id', id).maybeSingle();
   if (error) throw error;
+  if (!data || !(await ownedZone(req, data.wifi_zone_id))) return null;
   return data;
 }
 
@@ -94,7 +98,7 @@ const INACTIVE_ZONE_ERROR = {
 
 // GET /api/pricings
 // Public : forfaits actifs des zones actives seulement, sans ticket_profile.
-// Admin connecté : tous les forfaits (actifs et désactivés), avec ticket_profile et is_active.
+// Espace promoteur : les forfaits des zones du promoteur (actifs et désactivés), avec ticket_profile et is_active.
 // Filtre optionnel : ?zone_id=<uuid>.
 async function listPricings(req, res) {
   const { zone_id: zoneId } = req.query;
@@ -103,12 +107,14 @@ async function listPricings(req, res) {
     return res.status(400).json({ error: 'zone_id invalide' });
   }
 
-  const isAdmin = req.user?.role === 'admin';
+  const owner = Boolean(req.user);
 
-  let query = supabase.from('pricings').select(isAdmin ? ADMIN_COLUMNS : PUBLIC_COLUMNS);
+  let query = supabase.from('pricings').select(owner ? OWNER_COLUMNS : PUBLIC_COLUMNS);
 
-  if (isAdmin) {
-    query = query.order('is_active', { ascending: false });
+  if (owner) {
+    const zoneIds = await ownedZoneIds(req);
+    if (zoneIds.length === 0) return res.json({ pricings: [] });
+    query = query.in('wifi_zone_id', zoneIds).order('is_active', { ascending: false });
   } else {
     // Un forfait d'une zone désactivée n'est plus proposé aux clients.
     const { data: zones, error: zonesError } = await supabase.from('wifi_zones').select('id').eq('is_active', true);
@@ -128,12 +134,12 @@ async function listPricings(req, res) {
   res.json({ pricings: data });
 }
 
-// POST /api/pricings (admin) : crée un forfait, actif par défaut, dans une zone active.
+// POST /api/pricings (promoteur) : crée un forfait, actif par défaut, dans une de ses zones actives.
 async function createPricing(req, res) {
   const { value, field, message } = validatePricing(req.body);
   if (!value) return badRequest(res, field, message);
 
-  const zone = await findZone(value.wifi_zone_id);
+  const zone = await ownedZone(req, value.wifi_zone_id);
   if (!zone) return badRequest(res, 'wifi_zone_id', 'Cette zone WiFi n’existe pas.');
   if (!zone.is_active) return res.status(409).json(INACTIVE_ZONE_ERROR);
   if (await profileTaken(value.wifi_zone_id, value.ticket_profile)) return res.status(409).json(PROFILE_TAKEN_ERROR);
@@ -141,7 +147,7 @@ async function createPricing(req, res) {
   const { data, error } = await supabase
     .from('pricings')
     .insert({ ...value, is_active: true })
-    .select(ADMIN_COLUMNS)
+    .select(OWNER_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -149,24 +155,19 @@ async function createPricing(req, res) {
   res.status(201).json({ pricing: data });
 }
 
-// PUT /api/pricings/:id (admin) : remplace les informations d'un forfait.
+// PUT /api/pricings/:id (promoteur) : remplace les informations d'un de ses forfaits.
 // L'état actif / désactivé ne change pas ici : voir setPricingStatus.
 async function updatePricing(req, res) {
   const { id } = req.params;
-  if (!UUID_REGEX.test(id)) return res.status(404).json({ error: 'Forfait introuvable' });
+  if (!UUID_REGEX.test(id)) return res.status(404).json(NOT_FOUND);
 
   const { value, field, message } = validatePricing(req.body);
   if (!value) return badRequest(res, field, message);
 
-  const { data: current, error: currentError } = await supabase
-    .from('pricings')
-    .select('wifi_zone_id, ticket_profile')
-    .eq('id', id)
-    .maybeSingle();
-  if (currentError) throw currentError;
-  if (!current) return res.status(404).json({ error: 'Forfait introuvable' });
+  const current = await ownedPricing(req, id, 'wifi_zone_id, ticket_profile');
+  if (!current) return res.status(404).json(NOT_FOUND);
 
-  const zone = await findZone(value.wifi_zone_id);
+  const zone = await ownedZone(req, value.wifi_zone_id);
   if (!zone) return badRequest(res, 'wifi_zone_id', 'Cette zone WiFi n’existe pas.');
   // On peut corriger un forfait d'une zone désactivée, mais pas le déplacer vers une zone désactivée.
   if (!zone.is_active && value.wifi_zone_id !== current.wifi_zone_id) {
@@ -195,7 +196,7 @@ async function updatePricing(req, res) {
     .from('pricings')
     .update(value)
     .eq('id', id)
-    .select(ADMIN_COLUMNS)
+    .select(OWNER_COLUMNS)
     .maybeSingle();
 
   // 23503 : des tickets ou paiements sont liés à ce forfait ET à son ancienne zone.
@@ -206,45 +207,39 @@ async function updatePricing(req, res) {
     });
   }
   if (error) throw error;
-  if (!data) return res.status(404).json({ error: 'Forfait introuvable' });
+  if (!data) return res.status(404).json(NOT_FOUND);
 
   res.json({ pricing: data });
 }
 
-// PATCH /api/pricings/:id/status (admin) : { is_active: true | false }
+// PATCH /api/pricings/:id/status (promoteur) : { is_active: true | false }
 // On ne supprime jamais un forfait (tickets et paiements y sont liés) : on le désactive.
 async function setPricingStatus(req, res) {
   const { id } = req.params;
-  if (!UUID_REGEX.test(id)) return res.status(404).json({ error: 'Forfait introuvable' });
+  if (!UUID_REGEX.test(id)) return res.status(404).json(NOT_FOUND);
 
   const isActive = req.body?.is_active;
   if (typeof isActive !== 'boolean') {
     return badRequest(res, 'is_active', 'is_active doit valoir true ou false.');
   }
 
+  const current = await ownedPricing(req, id, 'wifi_zone_id, wifi_zones (is_active)');
+  if (!current) return res.status(404).json(NOT_FOUND);
+
   // Réactiver un forfait n'a pas de sens si sa zone est désactivée : les clients ne le verraient pas.
-  if (isActive) {
-    const { data: current, error: currentError } = await supabase
-      .from('pricings')
-      .select('wifi_zones (is_active)')
-      .eq('id', id)
-      .maybeSingle();
-    if (currentError) throw currentError;
-    if (!current) return res.status(404).json({ error: 'Forfait introuvable' });
-    if (current.wifi_zones && !current.wifi_zones.is_active) {
-      return res.status(409).json(INACTIVE_ZONE_ERROR);
-    }
+  if (isActive && current.wifi_zones && !current.wifi_zones.is_active) {
+    return res.status(409).json(INACTIVE_ZONE_ERROR);
   }
 
   const { data, error } = await supabase
     .from('pricings')
     .update({ is_active: isActive })
     .eq('id', id)
-    .select(ADMIN_COLUMNS)
+    .select(OWNER_COLUMNS)
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return res.status(404).json({ error: 'Forfait introuvable' });
+  if (!data) return res.status(404).json(NOT_FOUND);
 
   res.json({ pricing: data });
 }

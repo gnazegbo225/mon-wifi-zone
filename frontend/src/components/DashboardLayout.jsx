@@ -5,21 +5,21 @@ import { useAuth } from '../auth/useAuth';
 import { HomeIcon, LogoutIcon, MapPinIcon, TagIcon, TicketIcon, WifiIcon } from './icons';
 
 const MENU = [
-  { to: '/dashboard', label: 'Tableau de bord', short: 'Accueil', icon: HomeIcon, end: true },
-  { to: '/dashboard/zones', label: 'Zones', short: 'Zones', icon: MapPinIcon },
-  { to: '/dashboard/forfaits', label: 'Forfaits', short: 'Forfaits', icon: TagIcon },
-  { to: '/dashboard/tickets', label: 'Tickets', short: 'Tickets', icon: TicketIcon },
-  { to: '/dashboard/portail', label: 'Portail captif', short: 'Portail', icon: WifiIcon, adminOnly: true },
+  { to: '/espace', label: 'Tableau de bord', short: 'Accueil', icon: HomeIcon, end: true },
+  { to: '/espace/zones', label: 'Zones', short: 'Zones', icon: MapPinIcon },
+  { to: '/espace/forfaits', label: 'Forfaits', short: 'Forfaits', icon: TagIcon, vendorOnly: true },
+  { to: '/espace/tickets', label: 'Tickets', short: 'Tickets', icon: TicketIcon },
+  { to: '/espace/portail', label: 'Portail captif', short: 'Portail', icon: WifiIcon, vendorOnly: true },
 ];
 
 const PAGES = {
-  '/dashboard/zones': { title: 'Zones', subtitle: 'Tes lieux de vente, avec leurs forfaits et leurs tickets.' },
-  '/dashboard/forfaits': { title: 'Forfaits', subtitle: 'Crée et gère les tarifs que tes clients achètent.' },
-  '/dashboard/portail': { title: 'Portail captif', subtitle: 'Crée la page de connexion WiFi de tes routeurs.' },
-  '/dashboard/tickets': { title: 'Tickets', subtitle: 'Importe tes tickets MikroTik et suis ton stock.' },
+  '/espace/zones': { title: 'Zones', subtitle: 'Tes lieux de vente, avec leurs forfaits et leurs tickets.' },
+  '/espace/forfaits': { title: 'Forfaits', subtitle: 'Crée et gère les tarifs que tes clients achètent.' },
+  '/espace/portail': { title: 'Portail captif', subtitle: 'Crée la page de connexion WiFi de tes routeurs.' },
+  '/espace/tickets': { title: 'Tickets', subtitle: 'Importe tes tickets MikroTik et suis ton stock.' },
 };
 
-const ROLE_LABEL = { admin: 'Administrateur', vendeur: 'Vendeur' };
+const ROLE_LABEL = { vendor: 'Promoteur', employee: 'Employé' };
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -37,8 +37,8 @@ function capitalize(text) {
 // Grand écran : menu dans un panneau à gauche, titre et utilisateur en haut.
 export default function DashboardLayout() {
   const { user, signOut } = useAuth();
-  // Certaines pages (portail captif) ne servent qu'à l'admin.
-  const menu = MENU.filter((item) => !item.adminOnly || user?.role === 'admin');
+  // Forfaits et portail captif : le promoteur seulement, pas ses employés.
+  const menu = MENU.filter((item) => !item.vendorOnly || user?.role === 'vendor');
   const { pathname } = useLocation();
 
   const firstName = user?.full_name?.trim().split(/\s+/)[0] || '';

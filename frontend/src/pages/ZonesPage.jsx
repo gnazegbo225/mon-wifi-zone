@@ -37,7 +37,7 @@ function sortZones(list) {
 
 export default function ZonesPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const canManage = user?.role === 'vendor';
 
   const [zones, setZones] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -117,7 +117,7 @@ export default function ZonesPage() {
   return (
     <div className="max-w-6xl space-y-4">
       {/* Barre d'outils : filtres + bouton de création */}
-      {isAdmin && zones && (
+      {canManage && zones && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <FilterTabs label="Filtrer les zones" options={FILTERS} value={filter} counts={counts} onChange={setFilter} />
           <button
@@ -157,7 +157,7 @@ export default function ZonesPage() {
           </span>
           <p className="mt-4 text-lg font-bold text-brand">Aucune zone pour l'instant</p>
           <p className="mt-1 max-w-xs text-base text-muted">
-            {isAdmin ? 'Crée ta première zone, puis ajoute ses forfaits.' : 'Les zones apparaîtront ici.'}
+            {canManage ? 'Crée ta première zone, puis ajoute ses forfaits.' : 'Les zones apparaîtront ici.'}
           </p>
         </div>
       ) : visible.length === 0 ? (
@@ -170,7 +170,7 @@ export default function ZonesPage() {
             <ZoneCard
               key={z.id}
               zone={z}
-              isAdmin={isAdmin}
+              canManage={canManage}
               toggling={togglingId === z.id}
               onEdit={() => setEditing(z)}
               onToggle={() => toggle(z)}
@@ -186,7 +186,7 @@ export default function ZonesPage() {
   );
 }
 
-function ZoneCard({ zone: z, isAdmin, toggling, onEdit, onToggle }) {
+function ZoneCard({ zone: z, canManage, toggling, onEdit, onToggle }) {
   const active = z.is_active !== false;
   const stats = z.stats;
 
@@ -211,11 +211,11 @@ function ZoneCard({ zone: z, isAdmin, toggling, onEdit, onToggle }) {
           <p className={`text-lg leading-snug font-bold break-words ${active ? 'text-brand' : 'text-muted'}`}>{z.name}</p>
           <p className="truncate text-sm text-muted">{z.city}</p>
         </div>
-        {isAdmin && <StatusBadge active={active} activeLabel="Active" inactiveLabel="Désactivée" />}
+        {canManage && <StatusBadge active={active} activeLabel="Active" inactiveLabel="Désactivée" />}
       </div>
 
       {/* Routeur et gérant (admin seulement) */}
-      {isAdmin && (
+      {canManage && (
         <dl className="mt-4 space-y-2 text-sm">
           <div className="flex items-center gap-2">
             <dt className="flex shrink-0 items-center gap-2 text-muted">
@@ -244,7 +244,7 @@ function ZoneCard({ zone: z, isAdmin, toggling, onEdit, onToggle }) {
         </dl>
       )}
 
-      {isAdmin && (!z.router_host || !z.manager_phone) && (
+      {canManage && (!z.router_host || !z.manager_phone) && (
         <div className="mt-3 flex items-center justify-between gap-3 rounded-2xl bg-accent-soft px-3 py-2">
           <p className="flex items-center gap-2 text-sm text-ink">
             <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full bg-accent" />
@@ -278,19 +278,19 @@ function ZoneCard({ zone: z, isAdmin, toggling, onEdit, onToggle }) {
         </dl>
       )}
 
-      {isAdmin && !active && (
+      {canManage && !active && (
         <p className="mt-3 text-sm text-muted">Ses forfaits ne sont plus proposés aux clients.</p>
       )}
 
       <Link
-        to={`/dashboard/forfaits?zone=${z.id}`}
+        to={`/espace/forfaits?zone=${z.id}`}
         className="mt-3 flex items-center justify-between rounded-2xl px-1 py-2 text-sm font-bold text-brand transition hover:text-brand-hover"
       >
         Voir ses forfaits
         <ChevronRightIcon className="size-5" />
       </Link>
 
-      {isAdmin && (
+      {canManage && (
         <div className="mt-auto flex gap-2 pt-3">
           <button
             type="button"

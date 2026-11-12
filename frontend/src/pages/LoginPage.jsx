@@ -13,6 +13,7 @@ function messageForError(error) {
   if (error?.status === 0) return 'Le serveur ne répond pas. Vérifie ta connexion et réessaie.';
   if (error?.status === 401) return 'Cet email ou ce mot de passe ne marche pas. Vérifie-les et réessaie.';
   if (error?.status === 400) return 'Écris ton email et ton mot de passe pour continuer.';
+  if (error?.status === 429) return error.message;
   return 'Un souci de notre côté. Réessaie dans un instant.';
 }
 
@@ -28,7 +29,7 @@ export default function LoginPage() {
   const [error, setError] = useState(null); // { field: 'email' | 'password' | 'both' | null, message }
   const [submitting, setSubmitting] = useState(false);
 
-  const redirectTo = location.state?.from?.pathname || '/dashboard';
+  const redirectTo = location.state?.from?.pathname || '/espace';
 
   if (user) return <Navigate to={redirectTo} replace />;
 

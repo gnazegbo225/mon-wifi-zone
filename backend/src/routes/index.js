@@ -6,6 +6,7 @@ const pricingsRoutes = require('./pricings.routes');
 const authRoutes = require('./auth.routes');
 const ticketsRoutes = require('./tickets.routes');
 const publicRoutes = require('./public.routes');
+const adminRoutes = require('./admin.routes');
 
 const router = Router();
 
@@ -15,5 +16,6 @@ router.use('/pricings', pricingsRoutes);
 router.use('/auth', authRoutes);
 router.use('/tickets', ticketsRoutes);
 router.use('/public', publicRoutes);
+router.use('/admin', adminRoutes);
 
 module.exports = router;

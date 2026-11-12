@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import ProtectedRoute from './auth/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
 import BuyPage from './pages/BuyPage';
@@ -15,6 +15,16 @@ import ZonesPage from './pages/ZonesPage';
 
 // Page d'accueil chargée à part : framer-motion n'alourdit pas les pages d'achat ouvertes sur le hotspot.
 const LandingPage = lazy(() => import('./pages/LandingPage'));
+// Espace super admin : chargé à part, indépendant de l'espace promoteur.
+const AdminApp = lazy(() => import('./admin/AdminApp'));
+
+const blank = <div className="min-h-dvh bg-page" />;
+
+// Anciennes adresses (/dashboard/...) : on garde la suite du chemin et la recherche.
+function DashboardRedirect() {
+  const { pathname, search } = useLocation();
+  return <Navigate to={pathname.replace(/^\/dashboard/, '/espace') + search} replace />;
+}
 
 export default function App() {
   return (
@@ -22,12 +32,15 @@ export default function App() {
       <Route
         path="/"
         element={
-          <Suspense fallback={<div className="min-h-dvh bg-page" />}>
+          <Suspense fallback={blank}>
             <LandingPage />
           </Suspense>
         }
       />
-      <Route path="/login" element={<LoginPage />} />
+      {/* Espace promoteur */}
+      <Route path="/connexion" element={<LoginPage />} />
+      <Route path="/login" element={<Navigate to="/connexion" replace />} />
+      <Route path="/dashboard/*" element={<DashboardRedirect />} />
 
       {/* Parcours client, sans connexion */}
       <Route path="/buy/:zoneId" element={<BuyPage />} />
@@ -36,7 +49,7 @@ export default function App() {
       <Route path="/paiement/echec" element={<PaymentFailedPage />} />
 
       <Route element={<ProtectedRoute />}>
-        <Route path="/dashboard" element={<DashboardLayout />}>
+        <Route path="/espace" element={<DashboardLayout />}>
           <Route index element={<DashboardHome />} />
           <Route path="zones" element={<ZonesPage />} />
           <Route path="forfaits" element={<ForfaitsPage />} />
@@ -44,6 +57,16 @@ export default function App() {
           <Route path="portail" element={<PortalPage />} />
         </Route>
       </Route>
+
+      {/* Espace super admin */}
+      <Route
+        path="/admin/*"
+        element={
+          <Suspense fallback={blank}>
+            <AdminApp />
+          </Suspense>
+        }
+      />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -5,9 +5,11 @@ const { whereTicketStatus } = require('../utils/ticketStatus');
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // owner_id n'est jamais renvoyé : inutile pour le client.
-// router_host et manager_phone sont réservés à l'admin : l'adresse d'un routeur ne doit pas être publique.
+// router_host et manager_phone sont réservés à l'espace promoteur : l'adresse d'un routeur ne doit pas être publique.
 const PUBLIC_COLUMNS = 'id, name, country, city, created_at';
-const ADMIN_COLUMNS = `${PUBLIC_COLUMNS}, is_active, router_host, manager_phone`;
+const OWNER_COLUMNS = `${PUBLIC_COLUMNS}, is_active, router_host, manager_phone`;
+
+const NOT_FOUND = { error: 'Zone introuvable' };
 
 const HOSTNAME_REGEX = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 
@@ -134,16 +136,23 @@ async function withStats(zone) {
   return { ...zone, stats: stats[zone.id] };
 }
 
+// Le pays d'une zone est celui de son promoteur (règle aussi vérifiée par la base).
+function wrongCountry(req, res, value) {
+  if (value.country === req.user.country) return false;
+  badRequest(res, 'country', `Tes zones doivent être dans ton pays (${req.user.country}).`);
+  return true;
+}
+
 // GET /api/zones
 // Public : zones actives seulement.
-// Admin connecté : toutes les zones (actives et désactivées), avec is_active
-// et stats (nombre de forfaits et de tickets reliés à la zone).
+// Espace promoteur (promoteur ou employé) : les zones du promoteur, actives et désactivées,
+// avec is_active et stats (nombre de forfaits et de tickets reliés à la zone).
 async function listZones(req, res) {
-  const isAdmin = req.user?.role === 'admin';
+  const owner = Boolean(req.user);
 
-  let query = supabase.from('wifi_zones').select(isAdmin ? ADMIN_COLUMNS : PUBLIC_COLUMNS);
-  if (isAdmin) {
-    query = query.order('is_active', { ascending: false });
+  let query = supabase.from('wifi_zones').select(owner ? OWNER_COLUMNS : PUBLIC_COLUMNS);
+  if (owner) {
+    query = query.eq('owner_id', req.user.ownerId).order('is_active', { ascending: false });
   } else {
     query = query.eq('is_active', true);
   }
@@ -152,21 +161,22 @@ async function listZones(req, res) {
   const { data, error } = await query;
   if (error) throw error;
 
-  if (!isAdmin) return res.json({ zones: data });
+  if (!owner) return res.json({ zones: data });
 
   const stats = await zoneStats(data.map((z) => z.id));
   res.json({ zones: data.map((z) => ({ ...z, stats: stats[z.id] })) });
 }
 
-// POST /api/zones (admin) : crée une zone, active par défaut. Elle appartient à l'admin connecté.
+// POST /api/zones (promoteur) : crée une zone, active par défaut. Elle appartient au promoteur connecté.
 async function createZone(req, res) {
   const { value, field, message } = validateZone(req.body);
   if (!value) return badRequest(res, field, message);
+  if (wrongCountry(req, res, value)) return;
 
   const { data, error } = await supabase
     .from('wifi_zones')
-    .insert({ ...value, owner_id: req.user.id, is_active: true })
-    .select(ADMIN_COLUMNS)
+    .insert({ ...value, owner_id: req.user.ownerId, is_active: true })
+    .select(OWNER_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -174,34 +184,36 @@ async function createZone(req, res) {
   res.status(201).json({ zone: await withStats(data) });
 }
 
-// PUT /api/zones/:id (admin) : modifie le nom, la ville et le pays.
+// PUT /api/zones/:id (promoteur) : modifie une de ses zones.
 // L'état actif / désactivé ne change pas ici : voir setZoneStatus.
 async function updateZone(req, res) {
   const { id } = req.params;
-  if (!UUID_REGEX.test(id)) return res.status(404).json({ error: 'Zone introuvable' });
+  if (!UUID_REGEX.test(id)) return res.status(404).json(NOT_FOUND);
 
   const { value, field, message } = validateZone(req.body);
   if (!value) return badRequest(res, field, message);
+  if (wrongCountry(req, res, value)) return;
 
   const { data, error } = await supabase
     .from('wifi_zones')
     .update(value)
     .eq('id', id)
-    .select(ADMIN_COLUMNS)
+    .eq('owner_id', req.user.ownerId)
+    .select(OWNER_COLUMNS)
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return res.status(404).json({ error: 'Zone introuvable' });
+  if (!data) return res.status(404).json(NOT_FOUND);
 
   res.json({ zone: await withStats(data) });
 }
 
-// PATCH /api/zones/:id/status (admin) : { is_active: true | false }
+// PATCH /api/zones/:id/status (promoteur) : { is_active: true | false }
 // On ne supprime jamais une zone : on la désactive. Ses forfaits gardent leur
 // propre état, mais ne sont plus proposés aux clients tant que la zone est désactivée.
 async function setZoneStatus(req, res) {
   const { id } = req.params;
-  if (!UUID_REGEX.test(id)) return res.status(404).json({ error: 'Zone introuvable' });
+  if (!UUID_REGEX.test(id)) return res.status(404).json(NOT_FOUND);
 
   const isActive = req.body?.is_active;
   if (typeof isActive !== 'boolean') {
@@ -212,11 +224,12 @@ async function setZoneStatus(req, res) {
     .from('wifi_zones')
     .update({ is_active: isActive })
     .eq('id', id)
-    .select(ADMIN_COLUMNS)
+    .eq('owner_id', req.user.ownerId)
+    .select(OWNER_COLUMNS)
     .maybeSingle();
 
   if (error) throw error;
-  if (!data) return res.status(404).json({ error: 'Zone introuvable' });
+  if (!data) return res.status(404).json(NOT_FOUND);
 
   res.json({ zone: await withStats(data) });
 }

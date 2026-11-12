@@ -15,7 +15,7 @@ function formatSize(bytes) {
 
 export default function TicketsPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const canImport = user?.role === 'vendor' || user?.role === 'employee';
 
   const [zones, setZones] = useState([]);
   const [stock, setStock] = useState(null);
@@ -58,7 +58,7 @@ export default function TicketsPage() {
 
   return (
     <div className="max-w-6xl space-y-4">
-      {isAdmin && (
+      {canImport && (
         <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
           <ImportCard zones={zones} onImported={handleImported} />
           {report ? <ReportCard report={report} onClose={() => setReport(null)} /> : <FormatCard />}
@@ -81,7 +81,7 @@ export default function TicketsPage() {
 
 function messageForError(err) {
   if (err?.status === 0) return 'Le serveur ne répond pas. Vérifie ta connexion et réessaie.';
-  if (err?.status === 403) return 'Seul un administrateur peut importer des tickets.';
+  if (err?.status === 403) return 'Ton compte ne peut pas importer de tickets.';
   if (err?.status === 400 || err?.status === 409) return err.message;
   return 'L’import n’a pas marché. Réessaie dans un instant.';
 }
@@ -324,7 +324,7 @@ function ReportCard({ report, onClose }) {
             <p className="text-sm text-muted">
               Aucun forfait de cette zone n’a ces profils.{' '}
               <Link
-                to={`/dashboard/forfaits?zone=${report.zoneId}`}
+                to={`/espace/forfaits?zone=${report.zoneId}`}
                 className="font-bold text-brand underline underline-offset-2"
               >
                 Crée le forfait
@@ -464,7 +464,7 @@ function StockCard({ stock, failed, zones, zoneFilter, onZoneFilter, onRetry }) 
             </span>
             <p className="mt-3 text-base text-muted">
               Aucun forfait. Les tickets sont rangés par forfait :{' '}
-              <Link to="/dashboard/forfaits" className="font-bold text-brand underline underline-offset-2">
+              <Link to="/espace/forfaits" className="font-bold text-brand underline underline-offset-2">
                 crée d’abord tes forfaits
               </Link>
               .

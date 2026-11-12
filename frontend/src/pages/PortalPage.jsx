@@ -36,7 +36,7 @@ function download(fileName, content, type = 'text/html;charset=utf-8') {
 
 export default function PortalPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const canManage = user?.role === 'vendor';
 
   const [zones, setZones] = useState(null);
   const [failed, setFailed] = useState(false);
@@ -49,7 +49,7 @@ export default function PortalPage() {
   const [scriptCopied, setScriptCopied] = useState(false);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!canManage) return;
     let cancelled = false;
     getZones()
       .then((z) => {
@@ -65,7 +65,7 @@ export default function PortalPage() {
     return () => {
       cancelled = true;
     };
-  }, [isAdmin]);
+  }, [canManage]);
 
   const zone = zones?.find((z) => z.id === zoneId) || null;
   const phoneValue = cleanPhone(phone);
@@ -104,7 +104,7 @@ export default function PortalPage() {
     setZoneId(id);
     setErrors((e) => ({ ...e, zone_id: undefined }));
     setDownloaded([]);
-    // Le numéro du gérant de la zone est proposé, tant que l'admin n'a pas tapé le sien.
+    // Le numéro du gérant de la zone est proposé, tant que le promoteur n'a pas tapé le sien.
     const next = zones.find((z) => z.id === id);
     if (!phoneTouched) setPhone(formatPhone(next?.manager_phone || ''));
   }
@@ -122,10 +122,10 @@ export default function PortalPage() {
     setDownloaded((list) => [...new Set([...list, which])]);
   }
 
-  if (!isAdmin) {
+  if (!canManage) {
     return (
       <p className="rounded-3xl border border-dashed border-line bg-white p-6 text-center text-base text-muted">
-        Cette page est réservée à l’administrateur.
+        Cette page est réservée au promoteur.
       </p>
     );
   }
@@ -163,7 +163,7 @@ export default function PortalPage() {
           ) : zones.length === 0 ? (
             <p className="mt-4 text-base text-muted">
               Aucune zone.{' '}
-              <Link to="/dashboard/zones" className="font-bold text-brand underline underline-offset-2">
+              <Link to="/espace/zones" className="font-bold text-brand underline underline-offset-2">
                 Crée d’abord une zone
               </Link>
               .

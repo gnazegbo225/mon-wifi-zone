@@ -28,7 +28,7 @@ function sortPricings(list) {
 
 export default function ForfaitsPage() {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
+  const canManage = user?.role === 'vendor';
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [pricings, setPricings] = useState(null);
@@ -123,7 +123,7 @@ export default function ForfaitsPage() {
   return (
     <div className="max-w-6xl space-y-4">
       {/* Barre d'outils : filtres + bouton de création */}
-      {isAdmin && pricings && (
+      {canManage && pricings && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <FilterTabs label="Filtrer les forfaits" options={FILTERS} value={filter} counts={counts} onChange={setFilter} />
           <button
@@ -140,10 +140,10 @@ export default function ForfaitsPage() {
         </div>
       )}
 
-      {isAdmin && pricings && !hasActiveZone && (
+      {canManage && pricings && !hasActiveZone && (
         <p className="text-sm text-muted">
           Un forfait appartient toujours à une zone.{' '}
-          <Link to="/dashboard/zones" className="font-bold text-brand underline underline-offset-2">
+          <Link to="/espace/zones" className="font-bold text-brand underline underline-offset-2">
             Crée ou active d’abord une zone
           </Link>
           .
@@ -196,7 +196,7 @@ export default function ForfaitsPage() {
           </span>
           <p className="mt-4 text-lg font-bold text-brand">Aucun forfait pour l'instant</p>
           <p className="mt-1 max-w-xs text-base text-muted">
-            {isAdmin ? 'Crée ton premier forfait pour commencer à vendre des tickets.' : 'Les forfaits apparaîtront ici.'}
+            {canManage ? 'Crée ton premier forfait pour commencer à vendre des tickets.' : 'Les forfaits apparaîtront ici.'}
           </p>
         </div>
       ) : visible.length === 0 ? (
@@ -210,7 +210,7 @@ export default function ForfaitsPage() {
               key={p.id}
               pricing={p}
               zone={zonesById[p.wifi_zone_id]}
-              isAdmin={isAdmin}
+              canManage={canManage}
               toggling={togglingId === p.id}
               onEdit={() => setEditing(p)}
               onToggle={() => toggle(p)}
@@ -232,7 +232,7 @@ export default function ForfaitsPage() {
   );
 }
 
-function PricingCard({ pricing: p, zone, isAdmin, toggling, onEdit, onToggle }) {
+function PricingCard({ pricing: p, zone, canManage, toggling, onEdit, onToggle }) {
   const active = p.is_active !== false;
   const zoneActive = zone?.is_active !== false;
   // Un forfait est en vente seulement s'il est actif ET que sa zone est active.
@@ -257,21 +257,21 @@ function PricingCard({ pricing: p, zone, isAdmin, toggling, onEdit, onToggle }) 
       </p>
       <p className="mt-1 text-sm text-muted">{[p.duration_label, p.speed_label].filter(Boolean).join(' · ')}</p>
 
-      {isAdmin && p.ticket_profile && (
+      {canManage && p.ticket_profile && (
         <p className="mt-3 flex flex-wrap items-center gap-2 text-sm text-muted">
           Profil MikroTik
           <code className="rounded-lg bg-brand-soft px-2 py-0.5 font-mono text-sm text-brand">{p.ticket_profile}</code>
         </p>
       )}
 
-      {isAdmin && !zoneActive && (
+      {canManage && !zoneActive && (
         <p className="mt-3 flex items-start gap-2 rounded-2xl bg-page px-3 py-2 text-sm text-muted">
           <PowerIcon className="mt-px size-4 shrink-0" />
           Sa zone est désactivée : ce forfait n’est pas proposé aux clients.
         </p>
       )}
 
-      {isAdmin && (
+      {canManage && (
         <div className="mt-auto flex gap-2 pt-5">
           <button
             type="button"

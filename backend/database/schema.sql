@@ -2,15 +2,15 @@
 -- Schéma de la base de données — plateforme de vente de tickets WiFi
 -- Cible : PostgreSQL (Supabase)
 --
--- Un seul gérant pour l'instant, mais chaque zone WiFi a un propriétaire
--- (owner_id) pour pouvoir accueillir plusieurs gérants plus tard.
+-- Plateforme multi-promoteurs : chaque zone WiFi appartient à un promoteur
+-- (owner_id). Le super admin supervise la plateforme depuis un espace séparé.
 --
 -- La Row Level Security est activée sur toutes les tables SANS aucune
 -- politique : seul le backend (clé service_role) peut lire et écrire.
 -- Les clés anon / authenticated n'ont accès à rien.
 --
 -- Ce fichier décrit l'état final de la base. Il sert à créer une base neuve.
--- Une base existante se met à jour avec les fichiers de migrations/ (002, 003, 004).
+-- Une base existante se met à jour avec les fichiers de migrations/ (002 à 006).
 -- =============================================================================
 
 BEGIN;
@@ -33,28 +33,67 @@ $$;
 
 
 -- -----------------------------------------------------------------------------
--- users : les personnes qui se connectent au tableau de bord.
--- Un « admin » gère tout, un « vendeur » vend des tickets.
+-- countries : pays de la plateforme. Seuls les pays is_enabled acceptent de
+-- nouveaux promoteurs. Ajouter un pays = une ligne ici + ses moyens de paiement
+-- dans backend/src/config/countries.js.
+-- -----------------------------------------------------------------------------
+CREATE TABLE countries (
+    code        char(2) PRIMARY KEY CHECK (code ~ '^[A-Z]{2}$'),
+    name        text    NOT NULL,
+    currency    char(3) NOT NULL CHECK (currency ~ '^[A-Z]{3}$'),
+    is_enabled  boolean NOT NULL DEFAULT false
+);
+
+INSERT INTO countries (code, name, currency, is_enabled) VALUES ('CI', 'Côte d’Ivoire', 'XOF', true);
+
+
+-- -----------------------------------------------------------------------------
+-- users : les personnes qui se connectent.
+--   super_admin : supervise la plateforme (espace /admin séparé, double authentification).
+--   developer   : accès technique.
+--   vendor      : promoteur, possède des zones WiFi.
+--   employee    : employé d'un promoteur (employer_id), agit dans ses zones.
+-- Statut : pending_review (inscrit, à vérifier), approved, rejected, suspended.
 -- Le mot de passe n'est jamais stocké en clair, seulement son hash.
 -- -----------------------------------------------------------------------------
 CREATE TABLE users (
-    id             uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-    email          text        NOT NULL UNIQUE,
-    password_hash  text        NOT NULL,
-    full_name      text        NOT NULL,
-    role           text        NOT NULL DEFAULT 'vendeur'
-                               CHECK (role IN ('admin', 'vendeur')),
-    is_active      boolean     NOT NULL DEFAULT true,
-    created_at     timestamptz NOT NULL DEFAULT now(),
-    updated_at     timestamptz NOT NULL DEFAULT now()
+    id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    email           text        NOT NULL UNIQUE,
+    password_hash   text        NOT NULL,
+    full_name       text        NOT NULL,
+    role            text        NOT NULL DEFAULT 'vendor'
+                                CHECK (role IN ('super_admin', 'developer', 'vendor', 'employee')),
+    account_status  text        NOT NULL DEFAULT 'pending_review',
+    employer_id     uuid        REFERENCES users (id) ON DELETE RESTRICT,
+    country         char(2)     REFERENCES countries (code),
+    phone           text        CHECK (phone IS NULL OR phone ~ '^\+?[0-9]{8,15}$'),
+    last_login_at   timestamptz,
+    last_seen_at    timestamptz,
+    failed_logins   integer     NOT NULL DEFAULT 0,
+    locked_until    timestamptz,
+    -- Double authentification : secret chiffré par le backend, jamais en clair.
+    mfa_secret      text,
+    -- Dernier pas de 30 s accepté : un même code ne sert qu'une fois.
+    mfa_last_step   bigint,
+    created_at      timestamptz NOT NULL DEFAULT now(),
+    updated_at      timestamptz NOT NULL DEFAULT now(),
+    CONSTRAINT users_account_status_check CHECK (
+        account_status IN ('pending_review', 'approved', 'rejected', 'suspended')
+        AND (role = 'vendor' OR account_status IN ('approved', 'suspended'))
+    ),
+    CONSTRAINT users_employer_check CHECK ((role = 'employee') = (employer_id IS NOT NULL)),
+    CONSTRAINT users_vendor_country_check CHECK (role <> 'vendor' OR country IS NOT NULL),
+    CONSTRAINT users_super_admin_mfa_check CHECK (role <> 'super_admin' OR mfa_secret IS NOT NULL)
 );
+
+CREATE INDEX users_employer_id_idx ON users (employer_id) WHERE employer_id IS NOT NULL;
 
 CREATE TRIGGER users_set_updated_at
     BEFORE UPDATE ON users
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 COMMENT ON TABLE users IS
-    'Comptes qui se connectent au tableau de bord : admin (gère tout) ou vendeur (vend des tickets).';
+    'Comptes : super_admin (plateforme), developer (accès technique), vendor (promoteur, possède des zones), employee (employé d''un promoteur, employer_id). Statut : pending_review, approved, rejected, suspended.';
 
 
 -- -----------------------------------------------------------------------------
@@ -64,7 +103,7 @@ COMMENT ON TABLE users IS
 CREATE TABLE wifi_zones (
     id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
     name        text        NOT NULL,
-    country     char(2)     NOT NULL CHECK (country ~ '^[A-Z]{2}$'),
+    country     char(2)     NOT NULL REFERENCES countries (code),
     city        text        NOT NULL,
     owner_id    uuid        NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
     -- false : zone désactivée, ses forfaits ne sont plus proposés aux clients.
@@ -81,8 +120,30 @@ CREATE TABLE wifi_zones (
 
 CREATE INDEX wifi_zones_owner_id_idx ON wifi_zones (owner_id);
 
+-- Une zone est dans le pays de son promoteur.
+CREATE OR REPLACE FUNCTION check_zone_country()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = public
+AS $$
+DECLARE
+    v_country char(2);
+BEGIN
+    SELECT country INTO v_country FROM users WHERE id = NEW.owner_id;
+    IF v_country IS NOT NULL AND v_country <> NEW.country THEN
+        RAISE EXCEPTION 'La zone doit être dans le pays de son promoteur (%)', v_country
+            USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER wifi_zones_check_country
+    BEFORE INSERT OR UPDATE OF country, owner_id ON wifi_zones
+    FOR EACH ROW EXECUTE FUNCTION check_zone_country();
+
 COMMENT ON TABLE wifi_zones IS
-    'Zones WiFi (lieux) qui vendent des tickets. Chaque zone appartient à un gérant (owner_id). Pays en code ISO à 2 lettres (ex : CI).';
+    'Zones WiFi (lieux) qui vendent des tickets. Chaque zone appartient à un promoteur (owner_id), dans son pays.';
 
 
 -- -----------------------------------------------------------------------------
@@ -428,6 +489,7 @@ GRANT EXECUTE ON FUNCTION complete_payment(uuid, text, text)  TO service_role;
 -- Row Level Security : activée partout, aucune politique.
 -- Résultat : accès refusé à anon / authenticated, seul service_role passe.
 -- -----------------------------------------------------------------------------
+ALTER TABLE countries           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users               ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wifi_zones          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pricings            ENABLE ROW LEVEL SECURITY;

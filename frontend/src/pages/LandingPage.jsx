@@ -43,7 +43,7 @@ const VALUES = [
 
 export default function LandingPage() {
   const { user } = useAuth();
-  const spaceLink = user ? '/dashboard' : '/login';
+  const spaceLink = user ? '/espace' : '/connexion';
   const spaceLabel = user ? 'Mon tableau de bord' : 'Espace gérant';
 
   return (

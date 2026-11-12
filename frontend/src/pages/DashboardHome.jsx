@@ -223,7 +223,7 @@ function PricingsCard({ pricings, loading }) {
         subtitle="Prix proposés à tes clients"
         action={
           <Link
-            to="/dashboard/forfaits"
+            to="/espace/forfaits"
             className="flex shrink-0 items-center gap-1 rounded-full bg-white px-3 py-1.5 text-sm font-bold text-brand transition hover:bg-brand hover:text-white"
           >
             Tout voir <ChevronRightIcon className="size-4" />

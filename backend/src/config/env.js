@@ -31,6 +31,13 @@ module.exports = {
   jwtSecret: process.env.JWT_SECRET,
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '8h',
 
+  // Espace super admin : secret de jeton distinct, session courte, double authentification.
+  // Facultatif au démarrage : sans ces valeurs, seule la connexion super admin refuse de fonctionner.
+  adminJwtSecret: process.env.ADMIN_JWT_SECRET || '',
+  adminJwtExpiresIn: process.env.ADMIN_JWT_EXPIRES_IN || '1h',
+  // 64 caractères hexadécimaux : chiffre les secrets de double authentification en base.
+  mfaEncryptionKey: process.env.MFA_ENCRYPTION_KEY || '',
+
   // Paiement (Moneroo). Facultatif au démarrage pour ne pas bloquer le serveur :
   // seule la route de paiement refuse de fonctionner tant que ces valeurs manquent.
   monerooSecretKey: process.env.MONEROO_SECRET_KEY || '',

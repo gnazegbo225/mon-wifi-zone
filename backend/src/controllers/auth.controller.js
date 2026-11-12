@@ -1,62 +1,66 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+// Connexion de l'espace promoteur (rôles vendor et employee).
+// Le super admin a sa propre connexion, séparée : voir controllers/admin/auth.controller.js.
 const supabase = require('../config/supabase');
-const env = require('../config/env');
+const { signToken } = require('../middlewares/auth');
+const { checkCredentials, registerSuccess, LOCKED_MESSAGE } = require('../services/accounts');
 
-// Hash factice : quand l'email n'existe pas, on fait quand même une comparaison
-// pour que la réponse prenne le même temps (on ne révèle pas quels emails existent).
-const DUMMY_HASH = bcrypt.hashSync('mot-de-passe-factice', 10);
+const VENDOR_SPACE_ROLES = ['vendor', 'employee'];
+
+// Ce que le frontend reçoit du compte connecté.
+function publicUser(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    full_name: user.full_name,
+    role: user.role,
+    account_status: user.account_status,
+    country: user.country,
+  };
+}
 
 // POST /api/auth/login : { email, password } -> { token, user }
 async function login(req, res) {
   const { email, password } = req.body || {};
-
   if (typeof email !== 'string' || typeof password !== 'string' || !email || !password) {
     return res.status(400).json({ error: 'Email et mot de passe obligatoires' });
   }
 
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id, email, password_hash, full_name, role, is_active')
-    .eq('email', email.trim().toLowerCase())
-    .maybeSingle();
+  const result = await checkCredentials(email, password, VENDOR_SPACE_ROLES);
+  if (result.locked) return res.status(429).json({ error: LOCKED_MESSAGE });
+  if (result.invalid) return res.status(401).json({ error: 'Identifiants incorrects' });
 
-  if (error) throw error;
+  const { user } = result;
 
-  const passwordOk = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
-
-  // Même message dans tous les cas pour ne pas indiquer ce qui est faux.
-  if (!user || !passwordOk || !user.is_active) {
-    return res.status(401).json({ error: 'Identifiants incorrects' });
+  // Un employé ne peut plus se connecter si son promoteur est suspendu.
+  if (user.role === 'employee') {
+    const { data: employer, error } = await supabase
+      .from('users')
+      .select('account_status')
+      .eq('id', user.employer_id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!employer || employer.account_status === 'suspended') {
+      return res.status(401).json({ error: 'Identifiants incorrects' });
+    }
   }
 
-  const token = jwt.sign({ email: user.email, role: user.role }, env.jwtSecret, {
-    subject: user.id,
-    expiresIn: env.jwtExpiresIn,
-    algorithm: 'HS256',
-  });
-
-  res.json({
-    token,
-    user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role },
-  });
+  await registerSuccess(user);
+  res.json({ token: signToken('vendor', user), user: publicUser(user) });
 }
 
-// GET /api/auth/me : renvoie l'utilisateur connecté (route protégée).
+// GET /api/auth/me : le compte connecté (relu en base par requireAuth).
 async function me(req, res) {
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id, email, full_name, role, is_active')
-    .eq('id', req.user.id)
-    .maybeSingle();
-
-  if (error) throw error;
-
-  if (!user || !user.is_active) {
-    return res.status(401).json({ error: 'Compte introuvable ou désactivé' });
-  }
-
-  res.json({ user: { id: user.id, email: user.email, full_name: user.full_name, role: user.role } });
+  const u = req.user;
+  res.json({
+    user: publicUser({
+      id: u.id,
+      email: u.email,
+      full_name: u.fullName,
+      role: u.role,
+      account_status: u.accountStatus,
+      country: u.country,
+    }),
+  });
 }
 
 module.exports = { login, me };
