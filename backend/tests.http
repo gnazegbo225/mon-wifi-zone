@@ -1058,3 +1058,44 @@ Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 { "reason": "Numéro injoignable : appelle-nous." }
+
+
+# =============================================================================
+# Supervision du super admin (@adminToken)
+# =============================================================================
+
+### Vue d'ensemble : ventes, commissions, argent dû aux promoteurs, à traiter, promoteurs -> 200
+# period : today | 7d | 30d | month | all
+GET {{baseUrl}}/admin/overview?period=30d
+Authorization: Bearer {{adminToken}}
+
+### Promoteurs : statut, en ligne, zones, ventes et soldes de chacun -> 200
+GET {{baseUrl}}/admin/vendors
+Authorization: Bearer {{adminToken}}
+
+### Fiche d'un promoteur : statistiques, zones avec stock, dernières ventes, retraits -> 200 ; remplace l'id
+GET {{baseUrl}}/admin/vendors/ID_DU_PROMOTEUR
+Authorization: Bearer {{adminToken}}
+
+### Suspendre (motif obligatoire) : le promoteur et ses employés perdent l'accès tout de suite -> 200
+POST {{baseUrl}}/admin/vendors/ID_DU_PROMOTEUR/suspend
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "reason": "Plaintes de clients" }
+
+### Réactiver un compte suspendu -> 200 (409 si le compte n'est pas suspendu)
+POST {{baseUrl}}/admin/vendors/ID_DU_PROMOTEUR/reactivate
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "reason": "Situation réglée" }
+
+### Transactions, 50 par page, filtres facultatifs, avec les totaux -> 200
+# status : pending | completed | failed | cancelled
+GET {{baseUrl}}/admin/transactions?from=2026-11-01&to=2026-11-30&status=completed&page=1
+Authorization: Bearer {{adminToken}}
+
+### Toutes les zones : promoteur, stock, ventes sur 30 jours -> 200
+GET {{baseUrl}}/admin/zones
+Authorization: Bearer {{adminToken}}

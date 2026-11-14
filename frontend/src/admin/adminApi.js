@@ -123,3 +123,34 @@ export function markWithdrawalPaid(id, transferReference, note) {
     body: { transfer_reference: transferReference, note },
   });
 }
+
+// --- Supervision ------------------------------------------------------------
+
+// period : today | 7d | 30d | month | all
+export function getOverview(period) {
+  return request(`/overview?period=${encodeURIComponent(period)}`);
+}
+
+export function suspendVendor(id, reason) {
+  return request(`/vendors/${encodeURIComponent(id)}/suspend`, { method: 'POST', body: { reason } });
+}
+
+export function reactivateVendor(id, reason) {
+  return request(`/vendors/${encodeURIComponent(id)}/reactivate`, { method: 'POST', body: { reason } });
+}
+
+// filters : { from, to, status, vendorId, zoneId, page } → { transactions, totals, page, has_more }
+export function listTransactions({ from, to, status, vendorId, zoneId, page = 1 } = {}) {
+  const query = new URLSearchParams({ page: String(page) });
+  if (from) query.set('from', from);
+  if (to) query.set('to', to);
+  if (status) query.set('status', status);
+  if (vendorId) query.set('vendor_id', vendorId);
+  if (zoneId) query.set('zone_id', zoneId);
+  return request(`/transactions?${query}`);
+}
+
+export async function listAllZones() {
+  const data = await request('/zones');
+  return data.zones;
+}

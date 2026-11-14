@@ -32,3 +32,18 @@ export function since(value) {
   if (hours < 48) return `il y a ${hours} h`;
   return `il y a ${Math.round(hours / 24)} jours`;
 }
+
+// Statut d'un paiement client.
+export const PAYMENT_STATUS = {
+  completed: { label: 'Réussi', tone: 'success' },
+  pending: { label: 'En cours', tone: 'info' },
+  failed: { label: 'Échoué', tone: 'error' },
+  cancelled: { label: 'Annulé', tone: 'muted' },
+};
+
+// Dernière activité : « En ligne », « vu il y a 3 h », « jamais connecté ».
+export function lastSeen(vendor) {
+  if (vendor.online) return 'En ligne';
+  if (!vendor.last_seen_at) return 'Jamais connecté';
+  return `Vu ${since(vendor.last_seen_at)}`;
+}
