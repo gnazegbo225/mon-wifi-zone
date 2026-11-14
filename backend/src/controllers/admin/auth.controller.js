@@ -8,6 +8,7 @@ const env = require('../../config/env');
 const supabase = require('../../config/supabase');
 const { signToken } = require('../../middlewares/auth');
 const { changeEmail, checkCredentials, findById, isLocked, registerFailure, registerSuccess, LOCKED_MESSAGE } = require('../../services/accounts');
+const { record } = require('../../services/audit');
 const { open } = require('../../utils/secretBox');
 const { verifyCode } = require('../../utils/totp');
 
@@ -83,6 +84,7 @@ async function verifyMfa(req, res) {
   }
 
   await registerSuccess(user);
+  await record(req, 'admin.login', { targetType: 'account', targetId: user.id, actorId: user.id, details: { user_agent: req.get('user-agent') || undefined } });
   res.json({ token: signToken('admin', user), user: publicAdmin(user) });
 }
 
@@ -117,6 +119,7 @@ async function updateEmail(req, res) {
 
   const result = await changeEmail(user, { newEmail: b.new_email, confirmEmail: b.confirm_email, password: b.password });
   if (result.status) return res.status(result.status).json({ error: result.error, field: result.field });
+  await record(req, 'account.email_change', { targetType: 'account', targetId: user.id, details: { old: user.email, new: result.email } });
   res.json({ user: publicAdmin({ ...user, email: result.email }) });
 }
 

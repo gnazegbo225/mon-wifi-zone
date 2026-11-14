@@ -1119,3 +1119,31 @@ Authorization: Bearer {{adminToken}}
 Content-Type: application/json
 
 { "new_email": "nouvelle.admin@example.com", "confirm_email": "nouvelle.admin@example.com", "password": "{{superAdminPassword}}", "code": "000000" }
+
+
+# =============================================================================
+# Paramètres, corrections de solde, journal (@adminToken)
+# =============================================================================
+
+### Paramètres actuels : commission (%), retrait minimum (F), attente (h) -> 200
+GET {{baseUrl}}/admin/settings
+Authorization: Bearer {{adminToken}}
+
+### Modifier les paramètres -> 200 ; bornes : commission 0 à 30 %, minimum 100 à 1 000 000 F, attente 0 à 720 h
+# Les ventes déjà faites gardent la commission de leur jour. Chaque changement va au journal.
+PUT {{baseUrl}}/admin/settings
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "commission_percent": 8, "min_withdrawal": 1000, "hold_hours": 24 }
+
+### Correction de solde : montant positif (crédit) ou négatif (débit), motif obligatoire -> 200 (fiche du promoteur)
+POST {{baseUrl}}/admin/vendors/ID_DU_PROMOTEUR/adjustments
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "amount": -500, "note": "Remboursement d'un client (ticket défectueux)" }
+
+### Journal, le plus récent d'abord ; action = famille (vendor, withdrawal, adjustment, setting, admin) ou action précise -> 200
+GET {{baseUrl}}/admin/audit?action=withdrawal&page=1
+Authorization: Bearer {{adminToken}}

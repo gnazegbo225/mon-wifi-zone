@@ -160,3 +160,28 @@ export async function updateAdminEmail(values) {
   const data = await request('/auth/email', { method: 'PUT', body: values });
   return data.user;
 }
+
+// --- Paramètres, corrections, journal ----------------------------------------
+
+export async function getSettings() {
+  const data = await request('/settings');
+  return data.settings;
+}
+
+// values : { commission_percent, min_withdrawal, hold_hours }
+export async function updateSettings(values) {
+  const data = await request('/settings', { method: 'PUT', body: values });
+  return data.settings;
+}
+
+// amount : positif (crédit) ou négatif (débit), en FCFA. Renvoie la fiche du promoteur à jour.
+export function createAdjustment(vendorId, amount, note) {
+  return request(`/vendors/${encodeURIComponent(vendorId)}/adjustments`, { method: 'POST', body: { amount, note } });
+}
+
+// action : famille (vendor, withdrawal…) ou action précise (withdrawal.paid). → { entries, page, has_more }
+export function listAudit({ action, page = 1 } = {}) {
+  const query = new URLSearchParams({ page: String(page) });
+  if (action) query.set('action', action);
+  return request(`/audit?${query}`);
+}

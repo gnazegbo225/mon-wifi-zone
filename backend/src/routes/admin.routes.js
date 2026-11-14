@@ -6,6 +6,7 @@ const vendorsController = require('../controllers/admin/vendors.controller');
 const withdrawalsController = require('../controllers/admin/withdrawals.controller');
 const overviewController = require('../controllers/admin/overview.controller');
 const platformController = require('../controllers/admin/platform.controller');
+const settingsController = require('../controllers/admin/settings.controller');
 const { requireAdmin } = require('../middlewares/auth');
 
 const router = Router();
@@ -36,6 +37,12 @@ router.post('/vendors/:id/approve', requireAdmin, vendorsController.approveVendo
 router.post('/vendors/:id/reject', requireAdmin, vendorsController.rejectVendor);
 router.post('/vendors/:id/suspend', requireAdmin, vendorsController.suspendVendor);
 router.post('/vendors/:id/reactivate', requireAdmin, vendorsController.reactivateVendor);
+router.post('/vendors/:id/adjustments', requireAdmin, vendorsController.createAdjustment);
+
+// Paramètres de la plateforme et journal des actions.
+router.get('/settings', requireAdmin, settingsController.getSettings);
+router.put('/settings', requireAdmin, settingsController.updateSettings);
+router.get('/audit', requireAdmin, settingsController.listAudit);
 
 // Retraits : approuver, rejeter, marquer payé (avec la référence du transfert).
 router.get('/withdrawals', requireAdmin, withdrawalsController.listWithdrawals);

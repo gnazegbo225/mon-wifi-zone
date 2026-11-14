@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { formatPhone, formatPrice } from '../utils/format';
 import { Kpi, LoadError, Loading, OnlineDot } from './AdminUI';
-import { getVendor, reactivateVendor, suspendVendor } from './adminApi';
+import { createAdjustment, getVendor, reactivateVendor, suspendVendor } from './adminApi';
 import { PAYOUT_LABEL, STATUS_LABEL, TONE_CLASS, WITHDRAWAL_STATUS, formatDateTime, lastSeen } from './adminFormat';
 
 function Section({ title, action, children }) {
@@ -20,6 +20,112 @@ function Section({ title, action, children }) {
 }
 
 const Empty = ({ children }) => <p className="text-sm text-muted">{children}</p>;
+
+// Corrections manuelles du solde : liste, et formulaire crédit / débit avec motif obligatoire.
+function Adjustments({ vendorId, adjustments, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [kind, setKind] = useState('credit');
+  const [amount, setAmount] = useState('');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(event) {
+    event.preventDefault();
+    const value = Number(amount);
+    if (!Number.isInteger(value) || value <= 0) return setError('Écris un montant entier en FCFA.');
+    if (!note.trim()) return setError('Écris le motif : il reste dans l’historique.');
+    setBusy(true);
+    setError(null);
+    try {
+      onDone(await createAdjustment(vendorId, kind === 'credit' ? value : -value, note.trim()));
+      setOpen(false);
+      setAmount('');
+      setNote('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Section
+      title="Corrections de solde"
+      action={
+        !open && (
+          <button type="button" onClick={() => setOpen(true)} className="text-sm font-bold text-brand">
+            Corriger le solde
+          </button>
+        )
+      }
+    >
+      {open && (
+        <form onSubmit={submit} className="mb-6 space-y-3 rounded-2xl bg-page p-4">
+          <div role="radiogroup" aria-label="Sens" className="flex gap-2">
+            {[
+              ['credit', 'Créditer'],
+              ['debit', 'Débiter'],
+            ].map(([key, label]) => (
+              <label
+                key={key}
+                className={`cursor-pointer rounded-full px-4 py-2 text-sm font-bold transition ${kind === key ? 'bg-brand text-white' : 'bg-white text-ink ring-1 ring-line'}`}
+              >
+                <input type="radio" name="kind" value={key} checked={kind === key} onChange={() => setKind(key)} className="sr-only" />
+                {label}
+              </label>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
+            <input
+              aria-label="Montant en FCFA"
+              inputMode="numeric"
+              placeholder="Montant (F)"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value.replace(/\D/g, ''))}
+              className="h-12 rounded-2xl border border-line bg-white px-3 text-base outline-none focus:border-brand"
+            />
+            <input
+              aria-label="Motif"
+              placeholder="Motif (ex : remboursement d’un client)"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              className="h-12 rounded-2xl border border-line bg-white px-3 text-base outline-none focus:border-brand"
+            />
+          </div>
+          <p className="text-sm text-muted">Le montant est disponible (ou retiré) tout de suite. Une correction ne s’efface pas : pour l’annuler, fais la correction inverse.</p>
+          {error && <p role="alert" className="rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+          <div className="flex gap-2">
+            <button type="button" onClick={() => setOpen(false)} disabled={busy} className="h-11 rounded-full border border-line bg-white px-5 font-bold text-brand">
+              Annuler
+            </button>
+            <button type="submit" disabled={busy} className={`h-11 rounded-full px-5 font-bold text-white disabled:opacity-50 ${kind === 'credit' ? 'bg-brand' : 'bg-danger'}`}>
+              {kind === 'credit' ? 'Créditer' : 'Débiter'} {amount ? formatPrice(Number(amount)) : ''}
+            </button>
+          </div>
+        </form>
+      )}
+      {adjustments.length === 0 ? (
+        <Empty>Aucune correction.</Empty>
+      ) : (
+        <ul className="divide-y divide-line text-sm">
+          {adjustments.map((a) => (
+            <li key={a.id} className="flex justify-between gap-4 py-3">
+              <span>
+                <span className="block text-ink">{a.note}</span>
+                <span className="text-muted">{formatDateTime(a.created_at)}</span>
+              </span>
+              <span className={`shrink-0 font-bold ${a.amount > 0 ? 'text-success' : 'text-danger'}`}>
+                {a.amount > 0 ? '+' : '−'}
+                {formatPrice(Math.abs(a.amount))}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
+  );
+}
 
 export default function AdminVendorPage() {
   const { id } = useParams();
@@ -231,6 +337,8 @@ export default function AdminVendorPage() {
           )}
         </Section>
       </div>
+
+      <Adjustments vendorId={vendor.id} adjustments={data.adjustments || []} onDone={setData} />
     </div>
   );
 }

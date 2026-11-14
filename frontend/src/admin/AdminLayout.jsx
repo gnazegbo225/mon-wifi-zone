@@ -11,6 +11,7 @@ const MENU = [
   { to: '/admin/retraits', label: 'Retraits' },
   { to: '/admin/transactions', label: 'Transactions' },
   { to: '/admin/zones', label: 'Zones' },
+  { to: '/admin/journal', label: 'Journal' },
   { to: '/admin/parametres', label: 'Paramètres' },
 ];
 

@@ -4,6 +4,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 import AdminAuthProvider from './AdminAuthProvider';
 import AdminHomePage from './AdminHomePage';
 import AdminLayout from './AdminLayout';
+import AdminJournalPage from './AdminJournalPage';
 import AdminLoginPage from './AdminLoginPage';
 import AdminSettingsPage from './AdminSettingsPage';
 import AdminTransactionsPage from './AdminTransactionsPage';
@@ -26,6 +27,7 @@ export default function AdminApp() {
           <Route path="promoteurs/:id" element={<AdminVendorPage />} />
           <Route path="transactions" element={<AdminTransactionsPage />} />
           <Route path="zones" element={<AdminZonesPage />} />
+          <Route path="journal" element={<AdminJournalPage />} />
           <Route path="parametres" element={<AdminSettingsPage />} />
           <Route path="verifications" element={<AdminVerificationsPage />} />
           <Route path="verifications/:id" element={<AdminVendorReviewPage />} />

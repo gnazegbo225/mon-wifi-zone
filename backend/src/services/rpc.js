@@ -44,6 +44,13 @@ const ERRORS = {
   'vendor:bad_transition': [409, 'Ce compte a déjà changé de statut. Recharge la page.'],
   'vendor:not_submitted': [409, 'Ce promoteur n’a pas encore envoyé son dossier.'],
   'vendor:reason_required': [400, 'Écris le motif.', 'reason'],
+  // Paramètres (migration 010)
+  'setting:forbidden': [403, 'Accès refusé.'],
+  'setting:unknown': [400, 'Paramètre inconnu.'],
+  'setting:out_of_range': [400, (range) => {
+    const [min, max] = String(range || '').split('-').map(Number);
+    return `Valeur hors limites : entre ${min.toLocaleString('fr-FR')} et ${max.toLocaleString('fr-FR')}.`;
+  }],
 };
 
 // Erreur métier connue → { status, error, field, missing? } ; sinon null.

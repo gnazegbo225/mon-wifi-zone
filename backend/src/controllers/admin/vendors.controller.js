@@ -2,6 +2,8 @@
 const supabase = require('../../config/supabase');
 const { callRpc, sendHttpError } = require('../../services/rpc');
 const { signedUrl } = require('../../services/kycStorage');
+const { addAdjustment } = require('../../services/ledger');
+const { record } = require('../../services/audit');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STATUSES = ['pending_review', 'approved', 'rejected', 'suspended'];
@@ -15,6 +17,15 @@ const PROFILE_COLUMNS =
 
 const NOT_FOUND = { error: 'Promoteur introuvable.' };
 const ONLINE_MS = 5 * 60 * 1000; // vu dans les 5 dernières minutes = en ligne
+
+// Nom à afficher dans le journal : celui de la CNI (dossier) s'il existe, sinon celui de l'inscription.
+async function vendorLabel(id) {
+  const [{ data: user }, { data: profile }] = await Promise.all([
+    supabase.from('users').select('full_name, email').eq('id', id).maybeSingle(),
+    supabase.from('vendor_profiles').select('legal_name').eq('user_id', id).maybeSingle(),
+  ]);
+  return { vendor_name: profile?.legal_name || user?.full_name || null, email: user?.email || null };
+}
 
 const isOnline = (lastSeen) => Boolean(lastSeen) && Date.now() - new Date(lastSeen).getTime() < ONLINE_MS;
 
@@ -112,6 +123,13 @@ async function getVendor(req, res) {
     vendorStats(id),
     callRpc('admin_zone_stats', {}),
   ]);
+  const { data: adjustments, error: adjustmentsError } = await supabase
+    .from('ledger_entries')
+    .select('id, amount, note, created_by, created_at')
+    .eq('vendor_id', id)
+    .eq('type', 'adjustment')
+    .order('created_at', { ascending: false });
+  if (adjustmentsError) throw adjustmentsError;
   if (profileError) throw profileError;
   if (eventsError) throw eventsError;
   if (zonesError) throw zonesError;
@@ -144,6 +162,7 @@ async function getVendor(req, res) {
     }),
     withdrawals,
     recent_sales: sales.map((p) => ({ ...p, zone_name: zoneNames.get(p.wifi_zone_id) || null })),
+    adjustments,
   });
 }
 
@@ -166,6 +185,11 @@ async function decide(req, res, status) {
     p_checklist: checklist,
   });
   if (httpError) return sendHttpError(res, httpError);
+  await record(req, status === 'approved' ? 'vendor.approve' : 'vendor.reject', {
+    targetType: 'vendor',
+    targetId: id,
+    details: { ...(await vendorLabel(id)), reason: note || undefined, checklist },
+  });
   return getVendor(req, res);
 }
 
@@ -198,6 +222,11 @@ async function changeStatus(req, res, status) {
     p_checklist: null,
   });
   if (httpError) return sendHttpError(res, httpError);
+  await record(req, status === 'suspended' ? 'vendor.suspend' : 'vendor.reactivate', {
+    targetType: 'vendor',
+    targetId: id,
+    details: { ...(await vendorLabel(id)), reason: note || undefined },
+  });
   return getVendor(req, res);
 }
 
@@ -206,4 +235,27 @@ const suspendVendor = (req, res) => changeStatus(req, res, 'suspended');
 // POST /api/admin/vendors/:id/reactivate { reason? }
 const reactivateVendor = (req, res) => changeStatus(req, res, 'approved');
 
-module.exports = { listVendors, getVendor, approveVendor, rejectVendor, suspendVendor, reactivateVendor };
+// POST /api/admin/vendors/:id/adjustments { amount, note }
+// Correction manuelle du solde : montant positif (crédit) ou négatif (débit), motif obligatoire.
+// Disponible tout de suite ; inscrite au registre (ineffaçable) et au journal.
+async function createAdjustment(req, res) {
+  const { id } = req.params;
+  if (!UUID_REGEX.test(id)) return res.status(404).json(NOT_FOUND);
+  const amount = req.body?.amount;
+  if (typeof amount !== 'number' || !Number.isInteger(amount) || amount === 0 || Math.abs(amount) > 10_000_000) {
+    return res.status(400).json({ error: 'Écris un montant entier en FCFA, différent de 0.', field: 'amount' });
+  }
+  const note = typeof req.body?.note === 'string' ? req.body.note.trim() : '';
+  if (note.length > 300) return res.status(400).json({ error: 'Motif trop long (300 caractères maximum).', field: 'note' });
+
+  const { httpError } = await addAdjustment(id, amount, req.user.id, note);
+  if (httpError) return sendHttpError(res, httpError);
+  await record(req, 'adjustment.create', {
+    targetType: 'vendor',
+    targetId: id,
+    details: { ...(await vendorLabel(id)), amount, note },
+  });
+  return getVendor(req, res);
+}
+
+module.exports = { listVendors, getVendor, approveVendor, rejectVendor, suspendVendor, reactivateVendor, createAdjustment };

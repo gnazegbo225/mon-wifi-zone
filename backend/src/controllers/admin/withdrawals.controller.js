@@ -3,6 +3,7 @@
 const supabase = require('../../config/supabase');
 const { getBalance, setWithdrawalStatus } = require('../../services/ledger');
 const { sendHttpError } = require('../../services/rpc');
+const { record } = require('../../services/audit');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STATUSES = ['pending', 'approved', 'paid', 'rejected', 'cancelled'];
@@ -76,8 +77,20 @@ async function move(req, res, status, { reference, note }) {
   const { id } = req.params;
   if (!UUID_REGEX.test(id)) return res.status(404).json(NOT_FOUND);
   const text = (v) => (typeof v === 'string' ? v.trim() : null);
-  const { httpError } = await setWithdrawalStatus(id, status, req.user.id, { reference: text(reference), note: text(note) });
+  const { httpError, data: w } = await setWithdrawalStatus(id, status, req.user.id, { reference: text(reference), note: text(note) });
   if (httpError) return sendHttpError(res, httpError);
+  const map = await people([w.vendor_id]);
+  await record(req, `withdrawal.${status === 'approved' ? 'approve' : status === 'rejected' ? 'reject' : 'paid'}`, {
+    targetType: 'withdrawal',
+    targetId: id,
+    details: {
+      vendor_name: map.get(w.vendor_id)?.legal_name || map.get(w.vendor_id)?.full_name,
+      amount: w.amount,
+      method: w.method,
+      transfer_reference: w.transfer_reference || undefined,
+      reason: w.rejection_reason || undefined,
+    },
+  });
   return getWithdrawal(req, res);
 }
 
