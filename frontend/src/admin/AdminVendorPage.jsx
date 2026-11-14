@@ -344,14 +344,25 @@ export default function AdminVendorPage() {
         ) : (
           <ul className="divide-y divide-line text-sm">
             {data.employees.map((e) => (
-              <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                <span>
+              <li key={e.id} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3">
+                <span className="min-w-0">
                   <span className="block font-bold text-ink">{e.full_name}</span>
-                  <span className="text-muted">{e.email}</span>
+                  <span className="block text-muted">{e.email}</span>
+                  <span className="block text-muted">
+                    {e.zone_names?.length ? `Zones : ${e.zone_names.join(', ')}` : 'Toutes les zones (aucune confiée)'}
+                  </span>
                 </span>
-                <span className="flex items-center gap-2 text-ink">
-                  <OnlineDot online={e.online} />
-                  {e.account_status === 'suspended' ? 'Désactivé' : lastSeen(e)}
+                <span className="flex flex-wrap items-center gap-x-6 gap-y-1">
+                  {e.sales_today && (
+                    <span className="tabular-nums text-ink">
+                      <span className="text-muted">Aujourd’hui</span> {formatPrice(e.sales_today.amount)} · {e.sales_today.count}
+                      <span className="ml-3 text-muted">30 j</span> {formatPrice(e.sales_30d.amount)} · {e.sales_30d.count}
+                    </span>
+                  )}
+                  <span className="flex items-center gap-2 text-ink">
+                    <OnlineDot online={e.online} />
+                    {e.account_status === 'suspended' ? 'Désactivé' : lastSeen(e)}
+                  </span>
                 </span>
               </li>
             ))}

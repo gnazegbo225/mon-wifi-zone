@@ -4,6 +4,7 @@ const { callRpc, sendHttpError } = require('../../services/rpc');
 const { signedUrl } = require('../../services/kycStorage');
 const { addAdjustment } = require('../../services/ledger');
 const { record } = require('../../services/audit');
+const { employeesWithSales } = require('../vendorEmployees.controller');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STATUSES = ['pending_review', 'approved', 'rejected', 'suspended'];
@@ -123,13 +124,9 @@ async function getVendor(req, res) {
     vendorStats(id),
     callRpc('admin_zone_stats', {}),
   ]);
-  const { data: employees, error: employeesError } = await supabase
-    .from('users')
-    .select('id, full_name, email, account_status, last_seen_at')
-    .eq('role', 'employee')
-    .eq('employer_id', id)
-    .order('created_at', { ascending: true });
-  if (employeesError) throw employeesError;
+  // Employés, leurs zones et leurs ventes (= ventes de leurs zones) du jour et des 30 derniers jours.
+  const [today, month] = await Promise.all([employeesWithSales(id, 'today'), employeesWithSales(id, '30d')]);
+  const month30 = new Map(month.employees.map((e) => [e.id, e.sales]));
   const { data: adjustments, error: adjustmentsError } = await supabase
     .from('ledger_entries')
     .select('id, amount, note, created_by, created_at')
@@ -170,7 +167,12 @@ async function getVendor(req, res) {
     withdrawals,
     recent_sales: sales.map((p) => ({ ...p, zone_name: zoneNames.get(p.wifi_zone_id) || null })),
     adjustments,
-    employees: employees.map((e) => ({ ...e, online: isOnline(e.last_seen_at) })),
+    employees: today.employees.map(({ sales, ...e }) => ({
+      ...e,
+      zone_names: e.zone_ids.map((z) => zoneNames.get(z)),
+      sales_today: { count: sales.count, amount: sales.amount },
+      sales_30d: { count: month30.get(e.id).count, amount: month30.get(e.id).amount },
+    })),
   });
 }
 

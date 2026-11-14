@@ -285,9 +285,16 @@ export async function updateMyEmail(values) {
 
 // --- Employés du promoteur ----------------------------------------------------
 
-// { employees: [{ id, full_name, email, phone, active, online, last_seen_at, … }], max }
-export function getEmployees() {
-  return request('/vendor/employees');
+// period : today | 7d | 30d | month
+// { employees: [{ id, full_name, email, phone, active, online, last_seen_at, zone_ids, shared_zone_ids,
+//   sales: { count, amount, by_zone, by_pricing } }], zones: [{ id, name, is_active }], period, max }
+export function getEmployees(period = 'today') {
+  return request(`/vendor/employees?period=${encodeURIComponent(period)}`);
+}
+
+// Zones confiées à l'employé (liste vide : il voit toutes les zones) → { zone_ids }
+export function setEmployeeZones(id, zoneIds) {
+  return request(`/vendor/employees/${encodeURIComponent(id)}/zones`, { method: 'PUT', body: { zone_ids: zoneIds } });
 }
 
 // employee : { full_name, email, phone, password } (mot de passe provisoire)

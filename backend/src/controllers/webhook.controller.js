@@ -2,7 +2,11 @@
 // Documentation : https://docs.moneroo.io (Webhooks)
 const crypto = require('node:crypto');
 const env = require('../config/env');
-const { syncWithMoneroo } = require('../services/paymentSync');
+const { syncAndLog } = require('../services/syncLog');
+
+// Webhooks refusés (signature fausse) depuis le démarrage : visibles dans l'espace développeur.
+// Gardés en mémoire seulement : n'importe qui peut appeler cette adresse, on n'écrit rien en base pour eux.
+const rejected = { count: 0, last_at: null };
 
 // La signature X-Moneroo-Signature est un HMAC-SHA256 (hexadécimal) du corps reçu, avec le secret du webhook.
 function isSignatureValid(rawBody, signature) {
@@ -22,6 +26,8 @@ async function monerooWebhook(req, res) {
     return res.sendStatus(503);
   }
   if (!isSignatureValid(req.rawBody, req.get('x-moneroo-signature'))) {
+    rejected.count += 1;
+    rejected.last_at = new Date().toISOString();
     return res.sendStatus(403);
   }
 
@@ -32,7 +38,7 @@ async function monerooWebhook(req, res) {
   if (typeof event !== 'string' || !event.startsWith('payment.') || !monerooId) return;
 
   try {
-    const result = await syncWithMoneroo(String(monerooId));
+    const result = await syncAndLog(String(monerooId), { source: 'webhook', event });
     if (result) console.log(`Webhook ${event} : paiement ${result.paymentId} → ${result.status}`);
   } catch (err) {
     // Moneroo renverra le webhook ; la page /merci relira aussi le paiement.
@@ -40,4 +46,4 @@ async function monerooWebhook(req, res) {
   }
 }
 
-module.exports = { monerooWebhook, isSignatureValid };
+module.exports = { monerooWebhook, isSignatureValid, rejectedWebhooks: () => ({ ...rejected }) };

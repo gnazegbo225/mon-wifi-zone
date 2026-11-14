@@ -4,7 +4,7 @@ const supabase = require('../config/supabase');
 const env = require('../config/env');
 const { paymentMethodsFor } = require('../config/countries');
 const { initializePayment } = require('../services/moneroo');
-const { syncWithMoneroo } = require('../services/paymentSync');
+const { syncAndLog } = require('../services/syncLog');
 const { whereTicketStatus } = require('../utils/ticketStatus');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -251,7 +251,7 @@ async function getPaymentStatus(req, res) {
 
   if (payment.status === 'pending' && !payment.provider_payment_id.startsWith('pending:') && env.monerooSecretKey) {
     try {
-      await syncWithMoneroo(payment.provider_payment_id);
+      await syncAndLog(payment.provider_payment_id, { source: 'return_page', onlyChanges: true });
       payment = await readPayment();
     } catch (err) {
       console.error(`Lecture du paiement ${id} chez Moneroo impossible :`, err.message);

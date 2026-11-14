@@ -40,10 +40,12 @@ router.get('/withdrawals', finance.listMyWithdrawals);
 router.post('/withdrawals', finance.createWithdrawal);
 router.post('/withdrawals/:id/cancel', finance.cancelWithdrawal);
 
-// Employés : création, activation / désactivation, nouveau mot de passe. Pas de suppression.
+// Employés : création, activation / désactivation, zones confiées, nouveau mot de passe. Pas de suppression.
+// La liste donne aussi les ventes de chaque employé (= ventes de ses zones) : ?period=today|7d|30d|month.
 router.get('/employees', employees.listEmployees);
 router.post('/employees', employees.createEmployee);
 router.patch('/employees/:id/status', employees.setEmployeeStatus);
+router.put('/employees/:id/zones', employees.setEmployeeZones);
 router.post('/employees/:id/password', employees.resetEmployeePassword);
 
 module.exports = router;

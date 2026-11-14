@@ -19,6 +19,10 @@
 @intentPaymentId = {{intent.response.body.$.payment_id}}
 @mfaToken = {{adminLogin.response.body.$.mfa_token}}
 @adminToken = {{adminMfa.response.body.$.token}}
+@developerEmail = ADRESSE_DEVELOPPEUR
+@developerPassword = MOT_DE_PASSE_DEVELOPPEUR
+@devMfaToken = {{devLogin.response.body.$.mfa_token}}
+@devToken = {{devMfa.response.body.$.token}}
 
 
 ### Santé du serveur -> 200 { ok: true }
@@ -1153,9 +1157,18 @@ Authorization: Bearer {{adminToken}}
 # Employés du promoteur (@token du promoteur ; un employé reçoit 403 ici)
 # =============================================================================
 
-### Mes employés (20 au maximum) -> 200 { employees, max }
-GET {{baseUrl}}/vendor/employees
+### Mes employés (20 au maximum), leurs zones et leurs ventes -> 200 { employees, zones, period, max }
+# period : today (par défaut), 7d, 30d, month. Ventes d'un employé = ventes réussies de ses zones.
+GET {{baseUrl}}/vendor/employees?period=today
 Authorization: Bearer {{token}}
+
+### Confier des zones à un employé -> 200 { zone_ids } ; il ne voit plus que ces zones
+# Liste vide : il revoit toutes les zones. Zone d'un autre promoteur -> 400.
+PUT {{baseUrl}}/vendor/employees/ID_DE_L_EMPLOYE/zones
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "zone_ids": ["ID_DE_LA_ZONE"] }
 
 ### Ajouter un employé -> 201 ; mot de passe 8 caractères minimum, email déjà utilisé -> 409
 # L'employé se connecte ensuite sur /api/auth/login, comme le promoteur.
@@ -1179,3 +1192,47 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 { "password": "nouveau-mot-de-passe" }
+
+
+# =============================================================================
+# Espace développeur (/api/dev) : mot de passe, puis code à 6 chiffres
+# Compte créé par : DEVELOPER_EMAIL=... DEVELOPER_PASSWORD=... node scripts/create-developer.js
+# =============================================================================
+
+### 1. Mot de passe -> 200 { mfa_required: true, mfa_token }
+# @name devLogin
+POST {{baseUrl}}/dev/auth/login
+Content-Type: application/json
+
+{ "email": "{{developerEmail}}", "password": "{{developerPassword}}" }
+
+### 2. Code de l'application d'authentification -> 200 { token, user } ; remplace 000000 par le code affiché
+# @name devMfa
+POST {{baseUrl}}/dev/auth/mfa
+Content-Type: application/json
+
+{ "mfa_token": "{{devMfaToken}}", "code": "000000" }
+
+### Santé : API, base, configuration (sans secret), paiements, relectures Moneroo -> 200
+GET {{baseUrl}}/dev/overview
+Authorization: Bearer {{devToken}}
+
+### Moneroo répond-il, et accepte-t-il la clé ? (ne crée rien) -> 200 { ok, reason, http_status, latency_ms }
+GET {{baseUrl}}/dev/moneroo
+Authorization: Bearer {{devToken}}
+
+### Paiements : view = stuck (bloqués > 15 min), no_ticket, failed, recent ; q = identifiant, identifiant Moneroo ou numéro
+GET {{baseUrl}}/dev/payments?view=stuck
+Authorization: Bearer {{devToken}}
+
+### Un paiement : détails, ticket (sans mot de passe), relectures -> 200 ; remplace l'id
+GET {{baseUrl}}/dev/payments/ID_DU_PAIEMENT
+Authorization: Bearer {{devToken}}
+
+### Resynchroniser avec Moneroo -> 200 ; 409 si le paiement n'a jamais été créé chez Moneroo ; inscrit au journal
+POST {{baseUrl}}/dev/payments/ID_DU_PAIEMENT/sync
+Authorization: Bearer {{devToken}}
+
+### Relectures : source = webhook, return_page, developer ; problems=1 pour les problèmes seulement
+GET {{baseUrl}}/dev/events?source=webhook
+Authorization: Bearer {{devToken}}

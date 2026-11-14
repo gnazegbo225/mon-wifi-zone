@@ -61,6 +61,8 @@ export const AUDIT_LABEL = {
   'withdrawal.paid': 'Retrait payé',
   'adjustment.create': 'Correction de solde',
   'setting.update': 'Paramètre modifié',
+  'payment.sync': 'Paiement resynchronisé (développeur)',
+  'dev.login': 'Connexion développeur',
 };
 
 export const AUDIT_FAMILIES = [
@@ -70,6 +72,8 @@ export const AUDIT_FAMILIES = [
   { key: 'adjustment', label: 'Corrections' },
   { key: 'setting', label: 'Paramètres' },
   { key: 'admin', label: 'Connexions' },
+  { key: 'payment', label: 'Paiements' },
+  { key: 'dev', label: 'Développeur' },
 ];
 
 const SETTING_LABEL = {
@@ -103,6 +107,10 @@ export function describeAudit(entry) {
       return d.vendor_name || '';
     case 'account.email_change':
       return `${d.old} → ${d.new}`;
+    case 'payment.sync': {
+      const label = (s) => PAYMENT_STATUS[s]?.label || s;
+      return `${money(d.amount)} : ${label(d.before)} → ${label(d.after)}`;
+    }
     default:
       return '';
   }

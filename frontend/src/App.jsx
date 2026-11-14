@@ -21,6 +21,8 @@ import ZonesPage from './pages/ZonesPage';
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 // Espace super admin : chargé à part, indépendant de l'espace promoteur.
 const AdminApp = lazy(() => import('./admin/AdminApp'));
+// Espace développeur : chargé à part, indépendant des deux autres.
+const DevApp = lazy(() => import('./dev/DevApp'));
 
 const blank = <div className="min-h-dvh bg-page" />;
 
@@ -72,6 +74,16 @@ export default function App() {
         element={
           <Suspense fallback={blank}>
             <AdminApp />
+          </Suspense>
+        }
+      />
+
+      {/* Espace développeur */}
+      <Route
+        path="/dev/*"
+        element={
+          <Suspense fallback={blank}>
+            <DevApp />
           </Suspense>
         }
       />

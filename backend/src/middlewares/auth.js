@@ -2,8 +2,10 @@
 //   espace promoteur (/api/auth, /zones, /pricings, /tickets) : jeton signé avec JWT_SECRET,
 //     audience « vendor », pour les rôles vendor (promoteur) et employee (son employé) ;
 //   espace super admin (/api/admin) : jeton signé avec ADMIN_JWT_SECRET, audience « admin »,
-//     pour le rôle super_admin, délivré seulement après la double authentification.
-// Un jeton d'un espace est refusé par l'autre : secret et audience différents.
+//     pour le rôle super_admin, délivré seulement après la double authentification ;
+//   espace développeur (/api/dev) : jeton signé avec ADMIN_JWT_SECRET, audience « dev »,
+//     pour le rôle developer, lui aussi délivré seulement après la double authentification.
+// Un jeton d'un espace est refusé par les autres : secret ou audience différents (l'audience est toujours vérifiée).
 // À chaque requête, le compte est relu en base : une suspension ou un changement de rôle
 // s'applique tout de suite, sans attendre l'expiration du jeton.
 const jwt = require('jsonwebtoken');
@@ -13,6 +15,7 @@ const supabase = require('../config/supabase');
 const SPACES = {
   vendor: { secret: () => env.jwtSecret, expiresIn: () => env.jwtExpiresIn, roles: ['vendor', 'employee'] },
   admin: { secret: () => env.adminJwtSecret, expiresIn: () => env.adminJwtExpiresIn, roles: ['super_admin'] },
+  dev: { secret: () => env.adminJwtSecret, expiresIn: () => env.adminJwtExpiresIn, roles: ['developer'] },
 };
 
 const SEEN_EVERY_MS = 5 * 60 * 1000; // last_seen_at est mis à jour au plus toutes les 5 minutes.
@@ -43,6 +46,14 @@ async function loadAccount(space, userId) {
       .maybeSingle();
     if (employerError) throw employerError;
     if (!employer || employer.account_status === 'suspended') return null;
+
+    // Zones confiées à l'employé. Aucune : il voit toutes les zones de son promoteur.
+    const { data: zones, error: zonesError } = await supabase
+      .from('employee_zones')
+      .select('wifi_zone_id')
+      .eq('employee_id', user.id);
+    if (zonesError) throw zonesError;
+    user.zone_ids = zones.length ? zones.map((z) => z.wifi_zone_id) : null;
   }
   return user;
 }
@@ -91,6 +102,8 @@ function authenticate(space) {
       country: user.country,
       // Propriétaire des zones sur lesquelles ce compte agit : lui-même, ou son promoteur pour un employé.
       ownerId: user.role === 'employee' ? user.employer_id : user.id,
+      // Employé affecté à des zones : il ne voit qu'elles (voir middlewares/scope.js). null = toutes.
+      zoneIds: user.zone_ids || null,
     };
     touchLastSeen(user);
     next();
@@ -102,6 +115,9 @@ const requireAuth = authenticate('vendor');
 
 // Espace super admin : super_admin, jeton de l'espace admin.
 const requireAdmin = authenticate('admin');
+
+// Espace développeur : developer, jeton de l'espace dev.
+const requireDeveloper = authenticate('dev');
 
 // Pour une route publique qui en montre plus à un promoteur connecté.
 // Sans en-tête Authorization : on continue sans req.user. Avec un en-tête : il doit être valide.
@@ -121,4 +137,4 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { requireAuth, requireAdmin, optionalAuth, requireRole, signToken, SPACES };
+module.exports = { requireAuth, requireAdmin, requireDeveloper, optionalAuth, requireRole, signToken, SPACES };

@@ -1,6 +1,7 @@
 const net = require('node:net');
 const supabase = require('../config/supabase');
 const { whereTicketStatus } = require('../utils/ticketStatus');
+const { inScope } = require('../middlewares/scope');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -152,7 +153,7 @@ async function listZones(req, res) {
 
   let query = supabase.from('wifi_zones').select(owner ? OWNER_COLUMNS : PUBLIC_COLUMNS);
   if (owner) {
-    query = query.eq('owner_id', req.user.ownerId).order('is_active', { ascending: false });
+    query = inScope(req, query).order('is_active', { ascending: false });
   } else {
     query = query.eq('is_active', true);
   }

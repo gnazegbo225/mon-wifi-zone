@@ -44,6 +44,10 @@ const ERRORS = {
   'vendor:bad_transition': [409, 'Ce compte a déjà changé de statut. Recharge la page.'],
   'vendor:not_submitted': [409, 'Ce promoteur n’a pas encore envoyé son dossier.'],
   'vendor:reason_required': [400, 'Écris le motif.', 'reason'],
+  // Zones des employés (migration 011)
+  'employee_zone:not_found': [404, 'Employé introuvable.'],
+  'employee_zone:not_owned': [400, 'Une de ces zones n’est pas à toi.', 'zone_ids'],
+  'employee_zone:not_same_vendor': [400, 'Une de ces zones n’est pas à toi.', 'zone_ids'],
   // Paramètres (migration 010)
   'setting:forbidden': [403, 'Accès refusé.'],
   'setting:unknown': [400, 'Paramètre inconnu.'],

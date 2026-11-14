@@ -4,6 +4,7 @@
 const supabase = require('../config/supabase');
 const { getBalance, requestWithdrawal, setWithdrawalStatus } = require('../services/ledger');
 const { sendHttpError } = require('../services/rpc');
+const { maskPhone } = require('../utils/phone');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const PAGE_SIZE = 20;
@@ -24,13 +25,6 @@ async function payoutAccount(vendorId) {
     .maybeSingle();
   if (error) throw error;
   return data?.payout_method ? data : null;
-}
-
-// « 0707070712 » → « 07 •• •• •• 12 » : le promoteur n'a pas besoin du numéro complet de ses clients.
-function maskPhone(phone) {
-  const digits = String(phone || '').replace(/\D/g, '');
-  if (digits.length < 4) return null;
-  return `${digits.slice(-10, -8) || digits.slice(0, 2)} •• •• •• ${digits.slice(-2)}`;
 }
 
 // GET /api/vendor/balance : les quatre montants, les règles de retrait et le compte de retrait vérifié.

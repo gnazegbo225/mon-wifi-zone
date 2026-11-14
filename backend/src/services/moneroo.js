@@ -82,4 +82,28 @@ async function verifyPayment(id) {
   return data;
 }
 
-module.exports = { initializePayment, getPayment, verifyPayment };
+/**
+ * Vérifie que Moneroo répond et accepte la clé, sans rien créer : on demande un paiement qui n'existe pas.
+ * 404 (ou 400 / 422) = Moneroo répond et la clé est acceptée ; 401 / 403 = clé refusée.
+ * @returns {Promise<{ ok: boolean, reason: string, http_status: number|null, latency_ms: number }>}
+ */
+async function probe() {
+  if (!env.monerooSecretKey) return { ok: false, reason: 'no_key', http_status: null, latency_ms: 0 };
+  const started = Date.now();
+  try {
+    const response = await client.get('/v1/payments/verification-espace-developpeur/verify', {
+      headers: authHeaders(),
+      timeout: 8000,
+      validateStatus: () => true,
+    });
+    const status = response.status;
+    const latency = Date.now() - started;
+    if (status === 401 || status === 403) return { ok: false, reason: 'key_refused', http_status: status, latency_ms: latency };
+    if (status >= 500) return { ok: false, reason: 'moneroo_error', http_status: status, latency_ms: latency };
+    return { ok: true, reason: 'ok', http_status: status, latency_ms: latency };
+  } catch {
+    return { ok: false, reason: 'unreachable', http_status: null, latency_ms: Date.now() - started };
+  }
+}
+
+module.exports = { initializePayment, getPayment, verifyPayment, probe };

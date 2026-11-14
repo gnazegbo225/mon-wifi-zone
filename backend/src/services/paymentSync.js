@@ -55,7 +55,9 @@ async function releaseTicketOf(paymentId) {
  *   success            → paiement « completed », ticket vendu (complete_payment, migration 005) ;
  *   failed / cancelled → paiement marqué ainsi, ticket rendu libre tout de suite ;
  *   autre (pending…)   → rien.
- * @returns {Promise<{ paymentId: string, status: string, ticketId: string|null } | null>}
+ * outcome résume ce qui s'est passé (journal des relectures, migration 012) : updated, unchanged,
+ * amount_mismatch (ticket refusé), no_ticket (payé, mais plus de ticket libre).
+ * @returns {Promise<{ paymentId, status, previousStatus, ticketId, outcome, remoteStatus } | null>} null : paiement inconnu de la base
  */
 async function syncWithMoneroo(monerooId) {
   const remote = await verifyPayment(monerooId);
@@ -73,7 +75,7 @@ async function syncWithMoneroo(monerooId) {
       console.error(
         `ALERTE paiement ${payment.id} : Moneroo indique ${paidAmount} ${currency}, attendu ${payment.amount} ${env.paymentCurrency}. Ticket non délivré.`,
       );
-      return { paymentId: payment.id, status: payment.status, ticketId: null };
+      return { paymentId: payment.id, status: payment.status, previousStatus: payment.status, ticketId: null, outcome: 'amount_mismatch', remoteStatus: remote.status };
     }
 
     const { data: ticketId, error } = await supabase.rpc('complete_payment', {
@@ -85,7 +87,14 @@ async function syncWithMoneroo(monerooId) {
     if (!ticketId) {
       console.error(`ALERTE paiement ${payment.id} : payé, mais plus aucun ticket pour ce forfait. Prévenir le gérant.`);
     }
-    return { paymentId: payment.id, status: 'completed', ticketId: ticketId || null };
+    return {
+      paymentId: payment.id,
+      status: 'completed',
+      previousStatus: payment.status,
+      ticketId: ticketId || null,
+      outcome: !ticketId ? 'no_ticket' : payment.status === 'completed' ? 'unchanged' : 'updated',
+      remoteStatus: remote.status,
+    };
   }
 
   if (remote.status === 'failed' || remote.status === 'cancelled') {
@@ -97,10 +106,17 @@ async function syncWithMoneroo(monerooId) {
       .select('id');
     if (error) throw error;
     if (updated.length > 0) await releaseTicketOf(payment.id);
-    return { paymentId: payment.id, status: updated.length > 0 ? remote.status : payment.status, ticketId: null };
+    return {
+      paymentId: payment.id,
+      status: updated.length > 0 ? remote.status : payment.status,
+      previousStatus: payment.status,
+      ticketId: null,
+      outcome: updated.length > 0 ? 'updated' : 'unchanged',
+      remoteStatus: remote.status,
+    };
   }
 
-  return { paymentId: payment.id, status: payment.status, ticketId: null };
+  return { paymentId: payment.id, status: payment.status, previousStatus: payment.status, ticketId: null, outcome: 'unchanged', remoteStatus: remote.status };
 }
 
 module.exports = { syncWithMoneroo };
