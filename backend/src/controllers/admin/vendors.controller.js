@@ -123,6 +123,13 @@ async function getVendor(req, res) {
     vendorStats(id),
     callRpc('admin_zone_stats', {}),
   ]);
+  const { data: employees, error: employeesError } = await supabase
+    .from('users')
+    .select('id, full_name, email, account_status, last_seen_at')
+    .eq('role', 'employee')
+    .eq('employer_id', id)
+    .order('created_at', { ascending: true });
+  if (employeesError) throw employeesError;
   const { data: adjustments, error: adjustmentsError } = await supabase
     .from('ledger_entries')
     .select('id, amount, note, created_by, created_at')
@@ -163,6 +170,7 @@ async function getVendor(req, res) {
     withdrawals,
     recent_sales: sales.map((p) => ({ ...p, zone_name: zoneNames.get(p.wifi_zone_id) || null })),
     adjustments,
+    employees: employees.map((e) => ({ ...e, online: isOnline(e.last_seen_at) })),
   });
 }
 

@@ -1147,3 +1147,35 @@ Content-Type: application/json
 ### Journal, le plus récent d'abord ; action = famille (vendor, withdrawal, adjustment, setting, admin) ou action précise -> 200
 GET {{baseUrl}}/admin/audit?action=withdrawal&page=1
 Authorization: Bearer {{adminToken}}
+
+
+# =============================================================================
+# Employés du promoteur (@token du promoteur ; un employé reçoit 403 ici)
+# =============================================================================
+
+### Mes employés (20 au maximum) -> 200 { employees, max }
+GET {{baseUrl}}/vendor/employees
+Authorization: Bearer {{token}}
+
+### Ajouter un employé -> 201 ; mot de passe 8 caractères minimum, email déjà utilisé -> 409
+# L'employé se connecte ensuite sur /api/auth/login, comme le promoteur.
+POST {{baseUrl}}/vendor/employees
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "full_name": "Koffi Yao", "email": "koffi@example.com", "phone": "05 05 05 05 05", "password": "mot-de-passe-provisoire" }
+
+### Désactiver (active: false) ou réactiver (active: true) -> 200 ; remplace l'id
+# Désactivé, son jeton ne marche plus dès la requête suivante.
+PATCH {{baseUrl}}/vendor/employees/ID_DE_L_EMPLOYE/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "active": false }
+
+### Nouveau mot de passe -> 200 ; débloque aussi le compte après trop d'essais
+POST {{baseUrl}}/vendor/employees/ID_DE_L_EMPLOYE/password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "password": "nouveau-mot-de-passe" }

@@ -4,6 +4,7 @@ import ProtectedRoute from './auth/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
 import AccountPage from './pages/AccountPage';
 import BuyPage from './pages/BuyPage';
+import EmployeesPage from './pages/EmployeesPage';
 import DashboardHome from './pages/DashboardHome';
 import FinancesPage from './pages/FinancesPage';
 import ForfaitsPage from './pages/ForfaitsPage';
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="portail" element={<PortalPage />} />
           <Route path="compte" element={<AccountPage />} />
           <Route path="finances" element={<FinancesPage />} />
+          <Route path="employes" element={<EmployeesPage />} />
         </Route>
       </Route>
 

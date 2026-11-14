@@ -11,6 +11,7 @@ const MENU = [
   { to: '/espace/tickets', label: 'Tickets', short: 'Tickets', icon: TicketIcon },
   { to: '/espace/portail', label: 'Portail captif', short: 'Portail', icon: WifiIcon, vendorOnly: true, desktopOnly: true },
   { to: '/espace/finances', label: 'Finances', short: 'Argent', icon: CoinsIcon, vendorOnly: true },
+  { to: '/espace/employes', label: 'Employés', short: 'Équipe', icon: UserIcon, vendorOnly: true, desktopOnly: true },
   { to: '/espace/compte', label: 'Mon compte', short: 'Compte', icon: UserIcon, vendorOnly: true },
 ];
 
@@ -21,6 +22,7 @@ const PAGES = {
   '/espace/tickets': { title: 'Tickets', subtitle: 'Importe tes tickets MikroTik et suis ton stock.' },
   '/espace/compte': { title: 'Mon compte', subtitle: 'Ton dossier de vérification et ton compte de retrait.' },
   '/espace/finances': { title: 'Finances', subtitle: 'Ton solde, tes retraits et tes ventes.' },
+  '/espace/employes': { title: 'Employés', subtitle: 'Les comptes de ton équipe.' },
 };
 
 // Rappel tant que le compte du promoteur n'est pas vérifié (sauf sur la page Mon compte).

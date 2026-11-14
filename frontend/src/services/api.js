@@ -282,3 +282,25 @@ export async function updateMyEmail(values) {
   const data = await request('/auth/email', { method: 'PUT', body: values });
   return data.user;
 }
+
+// --- Employés du promoteur ----------------------------------------------------
+
+// { employees: [{ id, full_name, email, phone, active, online, last_seen_at, … }], max }
+export function getEmployees() {
+  return request('/vendor/employees');
+}
+
+// employee : { full_name, email, phone, password } (mot de passe provisoire)
+export async function createEmployee(employee) {
+  const data = await request('/vendor/employees', { method: 'POST', body: employee });
+  return data.employee;
+}
+
+export async function setEmployeeActive(id, active) {
+  const data = await request(`/vendor/employees/${encodeURIComponent(id)}/status`, { method: 'PATCH', body: { active } });
+  return data.employee;
+}
+
+export function resetEmployeePassword(id, password) {
+  return request(`/vendor/employees/${encodeURIComponent(id)}/password`, { method: 'POST', body: { password } });
+}

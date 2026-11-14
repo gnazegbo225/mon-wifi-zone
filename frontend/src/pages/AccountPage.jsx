@@ -2,6 +2,7 @@
 // Identité (CNI), photos (recto, verso, selfie) et compte de retrait. Une fois envoyé, le dossier
 // est vérifié par le super admin ; le premier retrait n'est possible qu'après son approbation.
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import EmailChangeForm from '../components/EmailChangeForm';
 import { Field } from '../components/FormDialog';
@@ -330,6 +331,17 @@ export default function AccountPage() {
           </button>
         </div>
       )}
+
+      <Link
+        to="/espace/employes"
+        className="flex items-center justify-between gap-4 rounded-3xl border border-line bg-white p-5 transition hover:border-brand sm:p-6"
+      >
+        <span>
+          <span className="block text-lg font-bold text-brand">Ton équipe</span>
+          <span className="block text-sm text-muted">Crée et gère les comptes de tes employés.</span>
+        </span>
+        <span className="text-xl text-brand">›</span>
+      </Link>
 
       <Section title="Ta connexion" subtitle="L’adresse email avec laquelle tu te connectes.">
         <EmailChangeForm

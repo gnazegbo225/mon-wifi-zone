@@ -3,6 +3,7 @@ const { Router } = require('express');
 const multer = require('multer');
 const { getProfile, updateProfile, uploadProfileDocument, submitProfile } = require('../controllers/vendor.controller');
 const finance = require('../controllers/vendorFinance.controller');
+const employees = require('../controllers/vendorEmployees.controller');
 const { requireAuth, requireRole } = require('../middlewares/auth');
 
 const router = Router();
@@ -38,5 +39,11 @@ router.get('/sales/monthly', finance.monthlySales);
 router.get('/withdrawals', finance.listMyWithdrawals);
 router.post('/withdrawals', finance.createWithdrawal);
 router.post('/withdrawals/:id/cancel', finance.cancelWithdrawal);
+
+// Employés : création, activation / désactivation, nouveau mot de passe. Pas de suppression.
+router.get('/employees', employees.listEmployees);
+router.post('/employees', employees.createEmployee);
+router.patch('/employees/:id/status', employees.setEmployeeStatus);
+router.post('/employees/:id/password', employees.resetEmployeePassword);
 
 module.exports = router;

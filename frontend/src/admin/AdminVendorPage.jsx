@@ -338,6 +338,27 @@ export default function AdminVendorPage() {
         </Section>
       </div>
 
+      <Section title={`Employés (${(data.employees || []).length})`}>
+        {(data.employees || []).length === 0 ? (
+          <Empty>Aucun employé.</Empty>
+        ) : (
+          <ul className="divide-y divide-line text-sm">
+            {data.employees.map((e) => (
+              <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <span>
+                  <span className="block font-bold text-ink">{e.full_name}</span>
+                  <span className="text-muted">{e.email}</span>
+                </span>
+                <span className="flex items-center gap-2 text-ink">
+                  <OnlineDot online={e.online} />
+                  {e.account_status === 'suspended' ? 'Désactivé' : lastSeen(e)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+
       <Adjustments vendorId={vendor.id} adjustments={data.adjustments || []} onDone={setData} />
     </div>
   );
