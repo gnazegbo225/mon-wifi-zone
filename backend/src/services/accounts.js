@@ -72,4 +72,42 @@ async function checkCredentials(email, password, roles) {
 
 const LOCKED_MESSAGE = `Trop d’essais. Réessaie dans ${LOCK_MINUTES} minutes.`;
 
-module.exports = { checkCredentials, findById, isLocked, registerFailure, registerSuccess, LOCKED_MESSAGE };
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Change l'adresse de connexion d'un compte, après avoir vérifié son mot de passe actuel.
+ * Un mauvais mot de passe compte dans le blocage après 5 échecs.
+ * @param {object} user ligne complète du compte (findById)
+ * @returns {Promise<{ email } | { status, error, field }>}
+ */
+async function changeEmail(user, { newEmail, confirmEmail, password }) {
+  const email = String(newEmail || '').trim().toLowerCase();
+  if (!EMAIL_REGEX.test(email) || email.length > 254) {
+    return { status: 400, error: 'Cette adresse email semble incomplète. Vérifie-la.', field: 'new_email' };
+  }
+  if (email !== String(confirmEmail || '').trim().toLowerCase()) {
+    return { status: 400, error: 'Les deux adresses ne sont pas identiques.', field: 'confirm_email' };
+  }
+  if (email === user.email) {
+    return { status: 400, error: 'C’est déjà ton adresse actuelle.', field: 'new_email' };
+  }
+  if (isLocked(user)) return { status: 429, error: LOCKED_MESSAGE, field: null };
+  if (typeof password !== 'string' || !(await bcrypt.compare(password, user.password_hash))) {
+    await registerFailure(user);
+    // 400 et non 401 : le compte reste connecté, c'est seulement une erreur de saisie.
+    return { status: 400, error: 'Ce mot de passe ne marche pas.', field: 'password' };
+  }
+
+  const { data: taken, error: findError } = await supabase.from('users').select('id').eq('email', email).maybeSingle();
+  if (findError) throw findError;
+  const inUse = { status: 409, error: 'Cette adresse est déjà utilisée par un autre compte.', field: 'new_email' };
+  if (taken) return inUse;
+
+  const { error } = await supabase.from('users').update({ email, failed_logins: 0 }).eq('id', user.id);
+  if (error?.code === '23505') return inUse; // prise au même instant par une autre requête
+  if (error) throw error;
+  console.log(`Adresse de connexion changée pour le compte ${user.id} (${user.role}) : ${user.email} → ${email}`);
+  return { email };
+}
+
+module.exports = { checkCredentials, findById, isLocked, registerFailure, registerSuccess, changeEmail, LOCKED_MESSAGE };

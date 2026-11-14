@@ -3,7 +3,7 @@
 const bcrypt = require('bcryptjs');
 const supabase = require('../config/supabase');
 const { signToken } = require('../middlewares/auth');
-const { checkCredentials, registerSuccess, LOCKED_MESSAGE } = require('../services/accounts');
+const { changeEmail, checkCredentials, findById, registerSuccess, LOCKED_MESSAGE } = require('../services/accounts');
 
 const VENDOR_SPACE_ROLES = ['vendor', 'employee'];
 
@@ -148,4 +148,23 @@ async function me(req, res) {
   });
 }
 
-module.exports = { login, me, register, listCountries };
+// PUT /api/auth/email { new_email, confirm_email, password } -> { user }
+// Change l'adresse de connexion du compte connecté, après vérification de son mot de passe actuel.
+async function updateEmail(req, res) {
+  const account = await findById(req.user.id);
+  const b = req.body || {};
+  const result = await changeEmail(account, { newEmail: b.new_email, confirmEmail: b.confirm_email, password: b.password });
+  if (result.status) return res.status(result.status).json({ error: result.error, field: result.field });
+  res.json({
+    user: publicUser({
+      id: req.user.id,
+      email: result.email,
+      full_name: req.user.fullName,
+      role: req.user.role,
+      account_status: req.user.accountStatus,
+      country: req.user.country,
+    }),
+  });
+}
+
+module.exports = { login, me, register, listCountries, updateEmail };

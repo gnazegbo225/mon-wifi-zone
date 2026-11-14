@@ -3,10 +3,11 @@
 // est vérifié par le super admin ; le premier retrait n'est possible qu'après son approbation.
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../auth/useAuth';
+import EmailChangeForm from '../components/EmailChangeForm';
 import { Field } from '../components/FormDialog';
 import Spinner from '../components/Spinner';
 import { AlertIcon, CameraIcon, CheckIcon } from '../components/icons';
-import { getVendorProfile, submitVendorProfile, updateVendorProfile, uploadVendorDocument } from '../services/api';
+import { getVendorProfile, submitVendorProfile, updateMyEmail, updateVendorProfile, uploadVendorDocument } from '../services/api';
 
 const MAX_PHOTO = 5 * 1024 * 1024;
 
@@ -77,7 +78,7 @@ function Section({ title, subtitle, children }) {
 }
 
 export default function AccountPage() {
-  const { refreshUser } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState(false);
   const [form, setForm] = useState(EMPTY);
@@ -329,6 +330,16 @@ export default function AccountPage() {
           </button>
         </div>
       )}
+
+      <Section title="Ta connexion" subtitle="L’adresse email avec laquelle tu te connectes.">
+        <EmailChangeForm
+          currentEmail={user?.email}
+          onSubmit={async (values) => {
+            await updateMyEmail(values);
+            await refreshUser().catch(() => {});
+          }}
+        />
+      </Section>
     </div>
   );
 }

@@ -5,6 +5,7 @@ import AdminAuthProvider from './AdminAuthProvider';
 import AdminHomePage from './AdminHomePage';
 import AdminLayout from './AdminLayout';
 import AdminLoginPage from './AdminLoginPage';
+import AdminSettingsPage from './AdminSettingsPage';
 import AdminTransactionsPage from './AdminTransactionsPage';
 import AdminVendorPage from './AdminVendorPage';
 import AdminVendorsPage from './AdminVendorsPage';
@@ -25,6 +26,7 @@ export default function AdminApp() {
           <Route path="promoteurs/:id" element={<AdminVendorPage />} />
           <Route path="transactions" element={<AdminTransactionsPage />} />
           <Route path="zones" element={<AdminZonesPage />} />
+          <Route path="parametres" element={<AdminSettingsPage />} />
           <Route path="verifications" element={<AdminVerificationsPage />} />
           <Route path="verifications/:id" element={<AdminVendorReviewPage />} />
           <Route path="retraits" element={<AdminWithdrawalsPage />} />

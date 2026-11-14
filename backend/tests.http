@@ -1099,3 +1099,23 @@ Authorization: Bearer {{adminToken}}
 ### Toutes les zones : promoteur, stock, ventes sur 30 jours -> 200
 GET {{baseUrl}}/admin/zones
 Authorization: Bearer {{adminToken}}
+
+
+# =============================================================================
+# Changer l'adresse de connexion
+# =============================================================================
+
+### Promoteur : nouvelle adresse (deux fois) + mot de passe actuel -> 200 { user }
+# 400 mot de passe faux (la session reste ouverte) · 409 adresse déjà utilisée
+PUT {{baseUrl}}/auth/email
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "new_email": "nouvelle@example.com", "confirm_email": "nouvelle@example.com", "password": "{{adminPassword}}" }
+
+### Super admin : nouvelle adresse (deux fois) + mot de passe actuel + code à 6 chiffres -> 200 { user }
+PUT {{baseUrl}}/admin/auth/email
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "new_email": "nouvelle.admin@example.com", "confirm_email": "nouvelle.admin@example.com", "password": "{{superAdminPassword}}", "code": "000000" }

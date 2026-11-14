@@ -154,3 +154,9 @@ export async function listAllZones() {
   const data = await request('/zones');
   return data.zones;
 }
+
+// Change l'adresse de connexion du super admin : { new_email, confirm_email, password, code } → user
+export async function updateAdminEmail(values) {
+  const data = await request('/auth/email', { method: 'PUT', body: values });
+  return data.user;
+}

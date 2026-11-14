@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 const env = require('../../config/env');
 const supabase = require('../../config/supabase');
 const { signToken } = require('../../middlewares/auth');
-const { checkCredentials, findById, isLocked, registerFailure, registerSuccess, LOCKED_MESSAGE } = require('../../services/accounts');
+const { changeEmail, checkCredentials, findById, isLocked, registerFailure, registerSuccess, LOCKED_MESSAGE } = require('../../services/accounts');
 const { open } = require('../../utils/secretBox');
 const { verifyCode } = require('../../utils/totp');
 
@@ -91,4 +91,33 @@ async function me(req, res) {
   res.json({ user: publicAdmin({ id: req.user.id, email: req.user.email, full_name: req.user.fullName, role: req.user.role }) });
 }
 
-module.exports = { login, verifyMfa, me };
+// PUT /api/admin/auth/email { new_email, confirm_email, password, code } -> { user }
+// Adresse de connexion du super admin : mot de passe actuel ET code de l'application d'authentification.
+async function updateEmail(req, res) {
+  if (!configured(res)) return;
+  const user = await findById(req.user.id);
+  if (isLocked(user)) return res.status(429).json({ error: LOCKED_MESSAGE });
+
+  const b = req.body || {};
+  const step = verifyCode(open(user.mfa_secret, env.mfaEncryptionKey), String(b.code || '').replace(/\s/g, ''));
+  // 400 et non 401 : la session admin reste ouverte, c'est seulement une erreur de saisie.
+  if (step === null) {
+    await registerFailure(user);
+    return res.status(400).json({ error: 'Ce code ne marche pas. Vérifie-le et réessaie.', field: 'code' });
+  }
+  // Le même code ne sert qu'une fois, ici comme à la connexion.
+  const { data: claimed, error } = await supabase
+    .from('users')
+    .update({ mfa_last_step: step })
+    .eq('id', user.id)
+    .or(`mfa_last_step.is.null,mfa_last_step.lt.${step}`)
+    .select('id');
+  if (error) throw error;
+  if (claimed.length === 0) return res.status(400).json({ error: 'Ce code a déjà servi. Attends le suivant.', field: 'code' });
+
+  const result = await changeEmail(user, { newEmail: b.new_email, confirmEmail: b.confirm_email, password: b.password });
+  if (result.status) return res.status(result.status).json({ error: result.error, field: result.field });
+  res.json({ user: publicAdmin({ ...user, email: result.email }) });
+}
+
+module.exports = { login, verifyMfa, me, updateEmail };

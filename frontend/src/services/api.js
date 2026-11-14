@@ -276,3 +276,9 @@ export function requestVendorWithdrawal(amount) {
 export function cancelVendorWithdrawal(id) {
   return request(`/vendor/withdrawals/${encodeURIComponent(id)}/cancel`, { method: 'POST' });
 }
+
+// Change l'adresse de connexion : { new_email, confirm_email, password } → user
+export async function updateMyEmail(values) {
+  const data = await request('/auth/email', { method: 'PUT', body: values });
+  return data.user;
+}

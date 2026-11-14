@@ -22,6 +22,7 @@ const loginLimit = rateLimit({
 router.post('/auth/login', loginLimit, authController.login);
 router.post('/auth/mfa', loginLimit, authController.verifyMfa);
 router.get('/auth/me', requireAdmin, authController.me);
+router.put('/auth/email', loginLimit, requireAdmin, authController.updateEmail);
 
 // Vue d'ensemble, transactions et zones de toute la plateforme.
 router.get('/overview', requireAdmin, overviewController.getOverview);

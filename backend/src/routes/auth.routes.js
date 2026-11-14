@@ -1,7 +1,7 @@
 // Connexion de l'espace promoteur (vendor et employee).
 const { Router } = require('express');
 const { rateLimit } = require('express-rate-limit');
-const { login, me, register, listCountries } = require('../controllers/auth.controller');
+const { login, me, register, listCountries, updateEmail } = require('../controllers/auth.controller');
 const { requireAuth } = require('../middlewares/auth');
 
 const router = Router();
@@ -27,6 +27,7 @@ const registerLimit = rateLimit({
 router.post('/login', loginLimit, login);
 router.post('/register', registerLimit, register);
 router.get('/countries', listCountries);
+router.put('/email', loginLimit, requireAuth, updateEmail);
 router.get('/me', requireAuth, me);
 
 module.exports = router;
