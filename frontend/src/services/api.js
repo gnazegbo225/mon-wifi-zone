@@ -205,6 +205,12 @@ export async function getPaymentStatus(paymentId) {
   return request(`/public/payments/${encodeURIComponent(paymentId)}`, { auth: false });
 }
 
+// « Récupérer mon ticket » : achats réussis des 7 derniers jours avec ce numéro, sur cette zone.
+// → { zone, purchases: [{ payment_id, completed_at, amount, pricing_name, pricing_duration_label, ticket|null }], router_host, days }
+export async function retrieveTickets(zoneId, phone) {
+  return request(`/public/zones/${encodeURIComponent(zoneId)}/retrieve`, { method: 'POST', body: { phone }, auth: false });
+}
+
 // --- Inscription et dossier du promoteur --------------------------------------
 
 // Pays ouverts aux inscriptions : [{ code, name }].

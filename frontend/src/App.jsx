@@ -14,6 +14,7 @@ import PaymentFailedPage from './pages/PaymentFailedPage';
 import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PortalPage from './pages/PortalPage';
 import RegisterPage from './pages/RegisterPage';
+import RetrievePage from './pages/RetrievePage';
 import TicketsPage from './pages/TicketsPage';
 import ZonesPage from './pages/ZonesPage';
 
@@ -52,6 +53,8 @@ export default function App() {
       {/* Parcours client, sans connexion */}
       <Route path="/buy/:zoneId" element={<BuyPage />} />
       <Route path="/merci" element={<MerciPage />} />
+      <Route path="/retrieve/:zoneId" element={<RetrievePage />} />
+      <Route path="/retrieve" element={<RetrievePage />} />
       <Route path="/paiement/succes" element={<PaymentSuccessPage />} />
       <Route path="/paiement/echec" element={<PaymentFailedPage />} />
 

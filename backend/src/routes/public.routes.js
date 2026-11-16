@@ -1,6 +1,6 @@
 const { Router } = require('express');
 const { rateLimit } = require('express-rate-limit');
-const { getPublicZone, createPaymentIntent, getPaymentStatus } = require('../controllers/public.controller');
+const { getPublicZone, createPaymentIntent, getPaymentStatus, retrieveTickets } = require('../controllers/public.controller');
 const { monerooWebhook } = require('../controllers/webhook.controller');
 
 const router = Router();
@@ -21,6 +21,20 @@ router.get(
     message: { error: 'Trop de demandes. Attends une minute, puis réessaie.' },
   }),
   getPaymentStatus,
+);
+
+// « Récupérer mon ticket » : une recherche par numéro de téléphone. Limite à part, sur 15 minutes,
+// pour empêcher d'essayer des numéros au hasard (assez large : les clients d'un hotspot partagent une IP).
+router.post(
+  '/zones/:id/retrieve',
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 30,
+    standardHeaders: 'draft-8',
+    legacyHeaders: false,
+    message: { error: 'Trop de recherches. Attends quelques minutes, puis réessaie.' },
+  }),
+  retrieveTickets,
 );
 
 // Routes sans connexion : 20 requêtes par minute et par adresse IP, pour les autres routes publiques.

@@ -834,6 +834,19 @@ GET {{baseUrl}}/public/payments/{{intentPaymentId}}
 GET {{baseUrl}}/public/payments/00000000-0000-4000-8000-000000000000
 
 ### ============================================================================
+### « Récupérer mon ticket » (POST /api/public/zones/:id/retrieve), page /retrieve/:zoneId
+### Achats réussis des 7 derniers jours avec ce numéro, sur cette zone (5 au plus).
+### 30 recherches par quart d'heure et par adresse IP.
+### ============================================================================
+
+### Retrouver ses tickets -> 200 { zone, purchases: [{ ticket: { username, password } | null }], router_host, days }
+# Numéro sans achat : purchases vide. « +225 07… » et « 07… » donnent le même résultat.
+POST {{baseUrl}}/public/zones/{{zoneId}}/retrieve
+Content-Type: application/json
+
+{ "phone": "07 07 07 07 07" }
+
+### ============================================================================
 ### Webhook Moneroo (POST /api/public/payments/webhook)
 ### Les vrais appels viennent de Moneroo, signés avec MONEROO_WEBHOOK_SECRET
 ### (en-tête X-Moneroo-Signature = HMAC-SHA256 hexadécimal du corps).

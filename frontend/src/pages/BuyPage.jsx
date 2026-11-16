@@ -7,15 +7,7 @@ import { formatPrice } from '../utils/format';
 import { readLastPurchase, saveLastPurchase } from '../client/lastPurchase';
 import Spinner from '../components/Spinner';
 import { createPaymentIntent, getPublicZone } from '../services/api';
-
-// 10 chiffres (07 07 07 07 07), avec +225 en option.
-function phoneError(value) {
-  const digits = value.replace(/\D/g, '');
-  const local = digits.startsWith('225') && digits.length > 10 ? digits.slice(3) : digits;
-  if (!value.trim()) return 'Écris ton numéro de téléphone.';
-  if (local.length !== 10) return 'Ce numéro n’est pas complet. Il faut 10 chiffres.';
-  return null;
-}
+import { phoneError } from '../client/phone';
 
 export default function BuyPage() {
   const { zoneId } = useParams();

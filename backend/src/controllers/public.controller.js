@@ -285,4 +285,77 @@ async function getPaymentStatus(req, res) {
   });
 }
 
-module.exports = { getPublicZone, createPaymentIntent, getPaymentStatus };
+// Tickets retrouvables : les achats réussis des 7 derniers jours, 5 au plus (les plus récents).
+const RETRIEVE_DAYS = 7;
+const RETRIEVE_MAX = 5;
+
+// Les 10 derniers chiffres d'un numéro (« +225 07 07… » et « 07 07… » donnent la même chose).
+function phoneKey(phone) {
+  const digits = String(phone || '').replace(/\D/g, '');
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
+// POST /api/public/zones/:id/retrieve  { phone }
+// « Récupérer mon ticket » : le client retrouve les tickets payés avec ce numéro, sur cette zone.
+// Aucun numéro trouvé : même réponse qu'un numéro sans achat (liste vide), sans rien révéler d'autre.
+// Un paiement réussi resté sans ticket (stock vide) est aussi renvoyé : le client sait qu'il doit appeler le gérant.
+async function retrieveTickets(req, res) {
+  const { id } = req.params;
+  if (!UUID_REGEX.test(id)) return res.status(404).json({ error: MESSAGES.zoneNotFound });
+  const phone = normalizePhone(req.body?.phone);
+  if (!phone) {
+    return res.status(400).json({ error: 'Ce numéro n’est pas valide. Écris-le comme ceci : 07 07 07 07 07.', field: 'phone' });
+  }
+
+  const { data: zone, error: zoneError } = await supabase
+    .from('wifi_zones')
+    .select('id, name, manager_phone, router_host')
+    .eq('id', id)
+    .maybeSingle();
+  if (zoneError) throw zoneError;
+  if (!zone) return res.status(404).json({ error: MESSAGES.zoneNotFound });
+
+  const key = phoneKey(phone);
+  const since = new Date(Date.now() - RETRIEVE_DAYS * 24 * 3600 * 1000).toISOString();
+  const { data: payments, error } = await supabase
+    .from('payments')
+    .select('id, completed_at, amount, pricing_name, pricing_duration_label, phone')
+    .eq('wifi_zone_id', zone.id)
+    .eq('status', 'completed')
+    .gte('completed_at', since)
+    .ilike('phone', `%${key}`)
+    .order('completed_at', { ascending: false })
+    .limit(20);
+  if (error) throw error;
+
+  // Le filtre de la base est large (« finit par ») : on garde les numéros identiques.
+  const mine = payments.filter((p) => phoneKey(p.phone) === key).slice(0, RETRIEVE_MAX);
+  let tickets = [];
+  if (mine.length) {
+    const { data, error: ticketsError } = await supabase
+      .from('tickets')
+      .select('payment_id, username, password')
+      .in('payment_id', mine.map((p) => p.id))
+      .eq('status', 'sold');
+    if (ticketsError) throw ticketsError;
+    tickets = data;
+  }
+  const ticketOf = new Map(tickets.map((tk) => [tk.payment_id, { username: tk.username, password: tk.password }]));
+
+  res.json({
+    zone: { id: zone.id, name: zone.name, manager_phone: zone.manager_phone },
+    purchases: mine.map((p) => ({
+      payment_id: p.id,
+      completed_at: p.completed_at,
+      amount: p.amount,
+      pricing_name: p.pricing_name,
+      pricing_duration_label: p.pricing_duration_label,
+      ticket: ticketOf.get(p.id) || null,
+    })),
+    // Adresse du routeur, pour « Me connecter maintenant » : seulement si un ticket est renvoyé.
+    router_host: tickets.length ? zone.router_host || null : null,
+    days: RETRIEVE_DAYS,
+  });
+}
+
+module.exports = { getPublicZone, createPaymentIntent, getPaymentStatus, retrieveTickets };
