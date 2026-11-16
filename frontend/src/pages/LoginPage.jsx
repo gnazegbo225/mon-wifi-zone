@@ -142,15 +142,20 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <label className="flex w-fit cursor-pointer items-center gap-3 py-1 text-sm text-ink select-none">
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={(e) => setRemember(e.target.checked)}
-              className="size-5 cursor-pointer rounded-md accent-brand"
-            />
-            Rester connecté
-          </label>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <label className="flex w-fit cursor-pointer items-center gap-3 py-1 text-sm text-ink select-none">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                className="size-5 cursor-pointer rounded-md accent-brand"
+              />
+              Rester connecté
+            </label>
+            <Link to="/mot-de-passe-oublie" className="py-1 text-sm font-bold text-brand underline-offset-2 hover:underline">
+              Mot de passe oublié ?
+            </Link>
+          </div>
 
           <button
             type="submit"

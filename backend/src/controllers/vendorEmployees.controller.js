@@ -206,7 +206,8 @@ async function resetEmployeePassword(req, res) {
 
   const { error } = await supabase
     .from('users')
-    .update({ password_hash: await bcrypt.hash(req.body.password, 12), failed_logins: 0, locked_until: null })
+    // password_changed_at : les sessions ouvertes avec l'ancien mot de passe sont fermées.
+    .update({ password_hash: await bcrypt.hash(req.body.password, 12), password_changed_at: new Date().toISOString(), failed_logins: 0, locked_until: null })
     .eq('id', employee.id)
     .eq('employer_id', req.user.id);
   if (error) throw error;

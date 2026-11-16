@@ -51,4 +51,10 @@ module.exports = {
   // Adresse publique du site client (sans / final) : sert au retour après paiement.
   frontendUrl: (process.env.FRONTEND_URL || '').replace(/\/+$/, ''),
   platformName: process.env.PLATFORM_NAME || 'monwifizone',
+
+  // Emails (Resend). Facultatif : sans clé, aucun email ne part (le serveur l'écrit dans ses journaux).
+  resendApiKey: process.env.RESEND_API_KEY || '',
+  resendApiUrl: (process.env.RESEND_API_URL || 'https://api.resend.com').replace(/\/+$/, ''),
+  // Expéditeur, sur le domaine vérifié dans Resend : « monwifizone <noreply@monwifizone.org> »
+  emailFrom: process.env.EMAIL_FROM || '',
 };

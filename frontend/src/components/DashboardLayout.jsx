@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import logoMark from '../assets/logo-mark.svg';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../auth/useAuth';
-import { AlertIcon, CoinsIcon, HomeIcon, LogoutIcon, MapPinIcon, TagIcon, TicketIcon, UserIcon, WifiIcon } from './icons';
+import { resendEmailVerification } from '../services/api';
+import { AlertIcon, CoinsIcon, HomeIcon, LogoutIcon, MailIcon, MapPinIcon, TagIcon, TicketIcon, UserIcon, WifiIcon } from './icons';
 
 const MENU = [
   { to: '/espace', label: 'Tableau de bord', short: 'Accueil', icon: HomeIcon, end: true },
@@ -44,6 +46,56 @@ function VerificationBanner({ user, pathname }) {
         <span className="font-bold underline underline-offset-2">Mon compte</span>
       </span>
     </Link>
+  );
+}
+
+// Rappel tant que l'adresse email du promoteur n'est pas confirmée (exigée pour retirer de l'argent).
+function EmailBanner({ user }) {
+  const [state, setState] = useState('idle'); // idle | sending | sent | error
+  const [message, setMessage] = useState('');
+  if (user?.role !== 'vendor' || user.email_verified !== false) return null;
+
+  async function resend() {
+    setState('sending');
+    try {
+      await resendEmailVerification();
+      setState('sent');
+    } catch (err) {
+      setMessage(err.message);
+      setState('error');
+    }
+  }
+
+  return (
+    <div role="status" className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-2xl bg-accent-soft px-4 py-3 text-sm text-ink">
+      <p className="flex min-w-0 items-start gap-3">
+        <MailIcon className="mt-px size-5 shrink-0 text-brand" />
+        <span>
+          {state === 'sent' ? (
+            <>
+              Email envoyé à <span className="font-bold break-all">{user.email}</span>. Regarde aussi dans les spams.
+            </>
+          ) : state === 'error' ? (
+            message
+          ) : (
+            <>
+              Confirme ton adresse <span className="font-bold break-all">{user.email}</span> : clique sur le lien que nous t’avons envoyé. C’est nécessaire pour retirer ton
+              argent.
+            </>
+          )}
+        </span>
+      </p>
+      {state !== 'sent' && (
+        <button
+          type="button"
+          onClick={resend}
+          disabled={state === 'sending'}
+          className="ml-8 shrink-0 font-bold text-brand underline underline-offset-2 disabled:opacity-60 sm:ml-0"
+        >
+          {state === 'sending' ? 'Envoi…' : 'Renvoyer l’email'}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -166,6 +218,7 @@ export default function DashboardLayout() {
             </div>
           </div>
 
+          <EmailBanner user={user} />
           <VerificationBanner user={user} pathname={pathname} />
           <Outlet />
         </main>

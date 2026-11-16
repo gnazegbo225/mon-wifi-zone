@@ -84,6 +84,10 @@ CREATE TABLE users (
     CONSTRAINT users_employer_check CHECK ((role = 'employee') = (employer_id IS NOT NULL)),
     CONSTRAINT users_vendor_country_check CHECK (role <> 'vendor' OR country IS NOT NULL),
     CONSTRAINT users_super_admin_mfa_check CHECK (role <> 'super_admin' OR mfa_secret IS NOT NULL),
+    -- Adresse confirmée (lien reçu par email) ; exigée seulement pour retirer de l'argent (migration 013).
+    email_verified_at   timestamptz,
+    -- Un mot de passe changé ferme les sessions ouvertes avant cette date (migration 013).
+    password_changed_at timestamptz,
     CONSTRAINT users_developer_mfa_check CHECK (role <> 'developer' OR mfa_secret IS NOT NULL)
 );
 
@@ -1585,5 +1589,26 @@ $$;
 
 REVOKE ALL ON FUNCTION dev_payments_without_ticket(integer, integer) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION dev_payments_without_ticket(integer, integer) TO service_role;
+
+-- =============================================================================
+-- Liens envoyés par email : mot de passe oublié, confirmation d'adresse (migration 013)
+-- =============================================================================
+CREATE TABLE account_tokens (
+    id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     uuid        NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    purpose     text        NOT NULL CHECK (purpose IN ('password_reset', 'email_verify')),
+    -- Empreinte SHA-256 (hexadécimal) du lien : le lien lui-même n'est jamais stocké.
+    token_hash  text        NOT NULL UNIQUE,
+    -- Adresse à confirmer (email_verify) : le lien ne vaut plus si l'adresse a changé depuis.
+    email       text,
+    expires_at  timestamptz NOT NULL,
+    used_at     timestamptz,
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX account_tokens_user_idx ON account_tokens (user_id, purpose, created_at DESC);
+
+COMMENT ON TABLE account_tokens IS
+    'Liens à usage unique envoyés par email (mot de passe oublié, confirmation d''adresse). Seule leur empreinte est stockée.';
 
 COMMIT;

@@ -11,7 +11,7 @@ const LOCK_MINUTES = 15;
 const DUMMY_HASH = bcrypt.hashSync('mot-de-passe-factice', 10);
 
 const LOGIN_COLUMNS =
-  'id, email, password_hash, full_name, role, account_status, employer_id, country, failed_logins, locked_until, mfa_secret, mfa_last_step';
+  'id, email, password_hash, full_name, role, account_status, employer_id, country, failed_logins, locked_until, mfa_secret, mfa_last_step, email_verified_at';
 
 function isLocked(user, now = new Date()) {
   return Boolean(user?.locked_until && new Date(user.locked_until) > now);
@@ -103,11 +103,12 @@ async function changeEmail(user, { newEmail, confirmEmail, password }) {
   const inUse = { status: 409, error: 'Cette adresse est déjà utilisée par un autre compte.', field: 'new_email' };
   if (taken) return inUse;
 
-  const { error } = await supabase.from('users').update({ email, failed_logins: 0 }).eq('id', user.id);
+  // La nouvelle adresse n'est pas encore confirmée (le lien part juste après, voir services/notify.js).
+  const { error } = await supabase.from('users').update({ email, failed_logins: 0, email_verified_at: null }).eq('id', user.id);
   if (error?.code === '23505') return inUse; // prise au même instant par une autre requête
   if (error) throw error;
   console.log(`Adresse de connexion changée pour le compte ${user.id} (${user.role}) : ${user.email} → ${email}`);
   return { email };
 }
 
-module.exports = { checkCredentials, findById, isLocked, registerFailure, registerSuccess, changeEmail, LOCKED_MESSAGE };
+module.exports = { findByEmail, checkCredentials, findById, isLocked, registerFailure, registerSuccess, changeEmail, LOCKED_MESSAGE };

@@ -148,6 +148,10 @@ async function createWithdrawal(req, res) {
   if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) {
     return res.status(400).json({ error: 'Le montant doit être un nombre entier de FCFA.', field: 'amount' });
   }
+  // Adresse confirmée obligatoire : c'est par elle que le promoteur est prévenu des retraits payés.
+  if (!req.user.emailVerified) {
+    return res.status(403).json({ error: 'Confirme d’abord ton adresse email : clique sur le lien que nous t’avons envoyé.', field: 'email' });
+  }
   const payout = await payoutAccount(req.user.id);
   if (!payout) {
     return res.status(400).json({ error: 'Ajoute ton compte de retrait dans Mon compte.', field: 'destination' });

@@ -1119,11 +1119,41 @@ Authorization: Bearer {{adminToken}}
 
 
 # =============================================================================
+# Mot de passe oublié et confirmation de l'adresse (emails envoyés par Resend)
+# Sans RESEND_API_KEY, aucun email ne part : le serveur l'écrit dans ses journaux.
+# =============================================================================
+
+### Mot de passe oublié -> 200, même réponse que le compte existe ou non (lien seulement pour un promoteur)
+POST {{baseUrl}}/auth/password/forgot
+Content-Type: application/json
+
+{ "email": "{{adminEmail}}" }
+
+### Nouveau mot de passe avec le jeton du lien reçu -> 200 ; 400 si le lien a servi ou expiré (30 min)
+# Ferme les sessions ouvertes avant : le @token du promoteur ne marche plus ensuite.
+POST {{baseUrl}}/auth/password/reset
+Content-Type: application/json
+
+{ "token": "JETON_DU_LIEN", "password": "nouveau-mot-de-passe" }
+
+### Confirmer l'adresse avec le jeton du lien reçu (sans connexion) -> 200 { email } ; 400 si le lien a servi ou expiré (3 jours)
+POST {{baseUrl}}/auth/email/verify
+Content-Type: application/json
+
+{ "token": "JETON_DU_LIEN" }
+
+### Renvoyer le lien de confirmation (3 par heure) -> 200 ; 409 si déjà confirmée
+POST {{baseUrl}}/auth/email/verify/resend
+Authorization: Bearer {{token}}
+
+
+# =============================================================================
 # Changer l'adresse de connexion
 # =============================================================================
 
 ### Promoteur : nouvelle adresse (deux fois) + mot de passe actuel -> 200 { user }
 # 400 mot de passe faux (la session reste ouverte) · 409 adresse déjà utilisée
+# L'ancienne adresse est prévenue ; la nouvelle reçoit un lien de confirmation (à confirmer pour retirer).
 PUT {{baseUrl}}/auth/email
 Authorization: Bearer {{token}}
 Content-Type: application/json

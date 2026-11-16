@@ -108,6 +108,28 @@ export function logout() {
   clearToken();
 }
 
+// --- Mot de passe oublié et confirmation de l'adresse -----------------------------
+
+// Toujours la même réponse, que le compte existe ou non → { message }
+export function forgotPassword(email) {
+  return request('/auth/password/forgot', { method: 'POST', body: { email }, auth: false });
+}
+
+// Nouveau mot de passe avec le lien reçu par email.
+export function resetPassword(token, password) {
+  return request('/auth/password/reset', { method: 'POST', body: { token, password }, auth: false });
+}
+
+// Lien de confirmation de l'adresse → { email }
+export function verifyEmail(token) {
+  return request('/auth/email/verify', { method: 'POST', body: { token }, auth: false });
+}
+
+// Renvoie le lien de confirmation à l'adresse du compte connecté → { email }
+export function resendEmailVerification() {
+  return request('/auth/email/verify/resend', { method: 'POST', body: {} });
+}
+
 // --- Données ---------------------------------------------------------------
 
 // Le token est envoyé s'il existe : un admin reçoit aussi les zones désactivées,

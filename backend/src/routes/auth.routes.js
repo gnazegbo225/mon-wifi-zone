@@ -1,7 +1,9 @@
 // Connexion de l'espace promoteur (vendor et employee).
 const { Router } = require('express');
 const { rateLimit } = require('express-rate-limit');
-const { login, me, register, listCountries, updateEmail } = require('../controllers/auth.controller');
+const auth = require('../controllers/auth.controller');
+
+const { login, me, register, listCountries, updateEmail } = auth;
 const { requireAuth } = require('../middlewares/auth');
 
 const router = Router();
@@ -29,5 +31,18 @@ router.post('/register', registerLimit, register);
 router.get('/countries', listCountries);
 router.put('/email', loginLimit, requireAuth, updateEmail);
 router.get('/me', requireAuth, me);
+
+// Mot de passe oublié et confirmation de l'adresse : 10 demandes par quart d'heure et par adresse IP.
+const emailLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Trop de demandes. Réessaie dans un quart d’heure.' },
+});
+router.post('/password/forgot', emailLimit, auth.forgotPassword);
+router.post('/password/reset', emailLimit, auth.resetPassword);
+router.post('/email/verify', emailLimit, auth.verifyEmail);
+router.post('/email/verify/resend', emailLimit, requireAuth, auth.resendVerification);
 
 module.exports = router;

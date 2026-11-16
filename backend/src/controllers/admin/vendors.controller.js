@@ -5,6 +5,7 @@ const { signedUrl } = require('../../services/kycStorage');
 const { addAdjustment } = require('../../services/ledger');
 const { record } = require('../../services/audit');
 const { employeesWithSales } = require('../vendorEmployees.controller');
+const { notify } = require('../../services/notify');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STATUSES = ['pending_review', 'approved', 'rejected', 'suspended'];
@@ -200,6 +201,8 @@ async function decide(req, res, status) {
     targetId: id,
     details: { ...(await vendorLabel(id)), reason: note || undefined, checklist },
   });
+  // Le promoteur est prévenu par email (sans attendre : un email raté ne bloque pas la décision).
+  notify(id, status === 'approved' ? 'vendorApproved' : 'vendorRejected', { reason: note });
   return getVendor(req, res);
 }
 
@@ -237,6 +240,7 @@ async function changeStatus(req, res, status) {
     targetId: id,
     details: { ...(await vendorLabel(id)), reason: note || undefined },
   });
+  notify(id, status === 'suspended' ? 'vendorSuspended' : 'vendorReactivated', { reason: note });
   return getVendor(req, res);
 }
 

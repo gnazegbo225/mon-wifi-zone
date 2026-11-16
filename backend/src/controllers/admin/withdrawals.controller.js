@@ -4,6 +4,7 @@ const supabase = require('../../config/supabase');
 const { getBalance, setWithdrawalStatus } = require('../../services/ledger');
 const { sendHttpError } = require('../../services/rpc');
 const { record } = require('../../services/audit');
+const { notify } = require('../../services/notify');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const STATUSES = ['pending', 'approved', 'paid', 'rejected', 'cancelled'];
@@ -91,6 +92,9 @@ async function move(req, res, status, { reference, note }) {
       reason: w.rejection_reason || undefined,
     },
   });
+  // Le promoteur est prévenu quand son retrait est payé ou refusé (sans attendre l'envoi).
+  if (status === 'paid') notify(w.vendor_id, 'withdrawalPaid', { amount: w.amount, method: w.method, reference: w.transfer_reference });
+  if (status === 'rejected') notify(w.vendor_id, 'withdrawalRejected', { amount: w.amount, reason: w.rejection_reason });
   return getWithdrawal(req, res);
 }
 

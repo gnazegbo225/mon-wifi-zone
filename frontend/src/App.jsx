@@ -15,6 +15,9 @@ import PaymentSuccessPage from './pages/PaymentSuccessPage';
 import PortalPage from './pages/PortalPage';
 import RegisterPage from './pages/RegisterPage';
 import RetrievePage from './pages/RetrievePage';
+import ConfirmEmailPage from './pages/ConfirmEmailPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import TicketsPage from './pages/TicketsPage';
 import ZonesPage from './pages/ZonesPage';
 
@@ -47,6 +50,9 @@ export default function App() {
       {/* Espace promoteur */}
       <Route path="/connexion" element={<LoginPage />} />
       <Route path="/inscription" element={<RegisterPage />} />
+      <Route path="/mot-de-passe-oublie" element={<ForgotPasswordPage />} />
+      <Route path="/mot-de-passe/nouveau" element={<ResetPasswordPage />} />
+      <Route path="/email/confirmer" element={<ConfirmEmailPage />} />
       <Route path="/login" element={<Navigate to="/connexion" replace />} />
       <Route path="/dashboard/*" element={<DashboardRedirect />} />
 

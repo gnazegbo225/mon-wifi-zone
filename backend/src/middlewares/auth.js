@@ -20,7 +20,8 @@ const SPACES = {
 
 const SEEN_EVERY_MS = 5 * 60 * 1000; // last_seen_at est mis à jour au plus toutes les 5 minutes.
 
-const ACCOUNT_COLUMNS = 'id, email, full_name, role, account_status, employer_id, country, last_seen_at';
+const ACCOUNT_COLUMNS =
+  'id, email, full_name, role, account_status, employer_id, country, last_seen_at, email_verified_at, password_changed_at';
 
 function signToken(space, user) {
   const { secret, expiresIn } = SPACES[space];
@@ -92,6 +93,10 @@ function authenticate(space) {
 
     const user = await loadAccount(space, payload.sub);
     if (!user) return res.status(401).json({ error: 'Compte introuvable ou suspendu' });
+    // Mot de passe changé après l'ouverture de cette session : elle est fermée.
+    if (user.password_changed_at && payload.iat < Math.floor(new Date(user.password_changed_at).getTime() / 1000)) {
+      return res.status(401).json({ error: 'Ton mot de passe a changé. Reconnecte-toi.' });
+    }
 
     req.user = {
       id: user.id,
@@ -100,6 +105,7 @@ function authenticate(space) {
       role: user.role,
       accountStatus: user.account_status,
       country: user.country,
+      emailVerified: Boolean(user.email_verified_at),
       // Propriétaire des zones sur lesquelles ce compte agit : lui-même, ou son promoteur pour un employé.
       ownerId: user.role === 'employee' ? user.employer_id : user.id,
       // Employé affecté à des zones : il ne voit qu'elles (voir middlewares/scope.js). null = toutes.
