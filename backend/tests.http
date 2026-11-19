@@ -1279,3 +1279,24 @@ Authorization: Bearer {{devToken}}
 ### Relectures : source = webhook, return_page, developer ; problems=1 pour les problèmes seulement
 GET {{baseUrl}}/dev/events?source=webhook
 Authorization: Bearer {{devToken}}
+
+
+# =============================================================================
+# Conditions générales et fermeture de compte
+# =============================================================================
+
+### Accepter la version en vigueur des conditions (promoteur) -> 200 { user: { terms_accepted: true } } ; 409 si autre version
+# L'inscription exige aussi "accept_terms": true dans POST /auth/register.
+POST {{baseUrl}}/auth/terms/accept
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{ "version": "2026-11-19" }
+
+### Fermer un compte promoteur (super admin, motif obligatoire) -> 200 ; 409 s'il lui reste de l'argent ou si un client paie
+# Définitif : ses zones arrêtent de vendre, ses pièces d'identité sont supprimées un an après.
+POST {{baseUrl}}/admin/vendors/ID_DU_PROMOTEUR/close
+Authorization: Bearer {{adminToken}}
+Content-Type: application/json
+
+{ "reason": "Demande du promoteur par email" }

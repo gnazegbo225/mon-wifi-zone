@@ -4,7 +4,7 @@ const { rateLimit } = require('express-rate-limit');
 const auth = require('../controllers/auth.controller');
 
 const { login, me, register, listCountries, updateEmail } = auth;
-const { requireAuth } = require('../middlewares/auth');
+const { requireAuth, requireRole } = require('../middlewares/auth');
 
 const router = Router();
 
@@ -31,6 +31,7 @@ router.post('/register', registerLimit, register);
 router.get('/countries', listCountries);
 router.put('/email', loginLimit, requireAuth, updateEmail);
 router.get('/me', requireAuth, me);
+router.post('/terms/accept', requireAuth, requireRole('vendor'), auth.acceptTerms);
 
 // Mot de passe oublié et confirmation de l'adresse : 10 demandes par quart d'heure et par adresse IP.
 const emailLimit = rateLimit({

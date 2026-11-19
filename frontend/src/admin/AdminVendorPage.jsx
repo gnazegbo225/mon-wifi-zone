@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { formatPhone, formatPrice } from '../utils/format';
 import { Kpi, LoadError, Loading, OnlineDot } from './AdminUI';
-import { createAdjustment, getVendor, reactivateVendor, suspendVendor } from './adminApi';
+import { closeVendor, createAdjustment, getVendor, reactivateVendor, suspendVendor } from './adminApi';
 import { PAYOUT_LABEL, STATUS_LABEL, TONE_CLASS, WITHDRAWAL_STATUS, formatDateTime, lastSeen } from './adminFormat';
 
 function Section({ title, action, children }) {
@@ -131,7 +131,7 @@ export default function AdminVendorPage() {
   const { id } = useParams();
   const [data, setData] = useState(null);
   const [failed, setFailed] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState(null); // null | 'status' (suspendre / réactiver) | 'close'
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -154,8 +154,9 @@ export default function AdminVendorPage() {
     setBusy(true);
     setError(null);
     try {
-      setData(status === 'suspended' ? await reactivateVendor(id, reason) : await suspendVendor(id, reason));
-      setConfirming(false);
+      if (confirming === 'close') setData(await closeVendor(id, reason));
+      else setData(status === 'suspended' ? await reactivateVendor(id, reason) : await suspendVendor(id, reason));
+      setConfirming(null);
       setReason('');
     } catch (err) {
       setError(err.message);
@@ -180,6 +181,11 @@ export default function AdminVendorPage() {
             <p className="mt-2 flex items-center gap-2 text-sm text-ink">
               <OnlineDot online={vendor.online} /> {lastSeen(vendor)} · inscrit le {formatDateTime(vendor.created_at)}
             </p>
+            <p className="mt-1 text-sm text-muted">
+              {vendor.terms_accepted_at
+                ? `Conditions générales acceptées le ${formatDateTime(vendor.terms_accepted_at)} (version ${vendor.terms_version})`
+                : 'Conditions générales pas encore acceptées'}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <span className="rounded-full bg-white px-4 py-1.5 text-sm font-bold text-brand ring-1 ring-line">{STATUS_LABEL[status]}</span>
@@ -189,7 +195,7 @@ export default function AdminVendorPage() {
             {(status === 'approved' || status === 'suspended') && !confirming && (
               <button
                 type="button"
-                onClick={() => setConfirming(true)}
+                onClick={() => setConfirming('status')}
                 className={`h-10 rounded-full px-4 text-sm font-bold transition ${
                   status === 'suspended' ? 'bg-brand text-white hover:bg-brand-hover' : 'text-danger hover:bg-danger-soft'
                 }`}
@@ -197,8 +203,26 @@ export default function AdminVendorPage() {
                 {status === 'suspended' ? 'Réactiver' : 'Suspendre'}
               </button>
             )}
+            {status !== 'closed' && !confirming && (
+              <button
+                type="button"
+                onClick={() => setConfirming('close')}
+                className="h-10 rounded-full px-4 text-sm font-bold text-danger transition hover:bg-danger-soft"
+              >
+                Fermer le compte
+              </button>
+            )}
           </div>
         </div>
+
+        {status === 'closed' && (
+          <p className="mt-6 rounded-2xl bg-page px-4 py-3 text-sm text-ink ring-1 ring-line">
+            Compte fermé le {formatDateTime(vendor.closed_at)}.{' '}
+            {profile.documents_purged_at
+              ? `Pièces d’identité supprimées le ${formatDateTime(profile.documents_purged_at)}.`
+              : `Pièces d’identité supprimées automatiquement à partir du ${formatDateTime(new Date(new Date(vendor.closed_at).getTime() + 365 * 24 * 3600 * 1000))}.`}
+          </p>
+        )}
 
         {confirming && (
           <form
@@ -209,10 +233,12 @@ export default function AdminVendorPage() {
             className="mt-6 rounded-3xl border border-line bg-white p-5"
           >
             <label htmlFor="status-reason" className="block text-sm font-bold text-ink">
-              {status === 'suspended' ? 'Note (facultatif)' : 'Motif de la suspension'}
+              {confirming === 'close' ? 'Motif de la fermeture' : status === 'suspended' ? 'Note (facultatif)' : 'Motif de la suspension'}
             </label>
             <p className="mt-1 text-sm text-muted">
-              {status === 'suspended'
+              {confirming === 'close'
+                ? 'Définitif : le promoteur et ses employés perdent l’accès, ses zones arrêtent de vendre et le compte ne pourra pas être rouvert. Possible seulement quand plus rien ne lui est dû. Ses pièces d’identité seront supprimées dans un an.'
+                : status === 'suspended'
                 ? 'Le promoteur et ses employés retrouvent l’accès tout de suite.'
                 : 'Le promoteur et ses employés perdent l’accès tout de suite. Ses zones restent en vente tant que tu ne les désactives pas.'}
             </p>
@@ -224,15 +250,15 @@ export default function AdminVendorPage() {
             />
             {error && <p role="alert" className="mt-3 rounded-xl bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
             <div className="mt-3 flex gap-2">
-              <button type="button" onClick={() => setConfirming(false)} disabled={busy} className="h-11 rounded-full border border-line px-5 font-bold text-brand">
+              <button type="button" onClick={() => { setConfirming(null); setError(null); }} disabled={busy} className="h-11 rounded-full border border-line px-5 font-bold text-brand">
                 Annuler
               </button>
               <button
                 type="submit"
-                disabled={busy || (status !== 'suspended' && !reason.trim())}
-                className={`h-11 rounded-full px-5 font-bold text-white disabled:opacity-50 ${status === 'suspended' ? 'bg-brand' : 'bg-danger'}`}
+                disabled={busy || ((confirming === 'close' || status !== 'suspended') && !reason.trim())}
+                className={`h-11 rounded-full px-5 font-bold text-white disabled:opacity-50 ${confirming !== 'close' && status === 'suspended' ? 'bg-brand' : 'bg-danger'}`}
               >
-                {status === 'suspended' ? 'Réactiver le compte' : 'Suspendre le compte'}
+                {confirming === 'close' ? 'Fermer définitivement' : status === 'suspended' ? 'Réactiver le compte' : 'Suspendre le compte'}
               </button>
             </div>
           </form>

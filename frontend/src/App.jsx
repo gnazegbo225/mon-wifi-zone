@@ -18,6 +18,7 @@ import RetrievePage from './pages/RetrievePage';
 import ConfirmEmailPage from './pages/ConfirmEmailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import TermsPage from './pages/TermsPage';
 import TicketsPage from './pages/TicketsPage';
 import ZonesPage from './pages/ZonesPage';
 
@@ -53,6 +54,7 @@ export default function App() {
       <Route path="/mot-de-passe-oublie" element={<ForgotPasswordPage />} />
       <Route path="/mot-de-passe/nouveau" element={<ResetPasswordPage />} />
       <Route path="/email/confirmer" element={<ConfirmEmailPage />} />
+      <Route path="/conditions-promoteurs" element={<TermsPage />} />
       <Route path="/login" element={<Navigate to="/connexion" replace />} />
       <Route path="/dashboard/*" element={<DashboardRedirect />} />
 

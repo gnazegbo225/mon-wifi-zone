@@ -5,6 +5,7 @@ export const STATUS_LABEL = {
   approved: 'Vérifié',
   rejected: 'Rejeté',
   suspended: 'Suspendu',
+  closed: 'Fermé',
 };
 
 export { PAYOUT_LABEL, TONE_CLASS, WITHDRAWAL_STATUS } from '../utils/labels';
@@ -56,6 +57,7 @@ export const AUDIT_LABEL = {
   'vendor.reject': 'Dossier rejeté',
   'vendor.suspend': 'Promoteur suspendu',
   'vendor.reactivate': 'Promoteur réactivé',
+  'vendor.close': 'Compte fermé',
   'withdrawal.approve': 'Retrait approuvé',
   'withdrawal.reject': 'Retrait rejeté',
   'withdrawal.paid': 'Retrait payé',
@@ -101,6 +103,7 @@ export function describeAudit(entry) {
       return `${d.vendor_name} : ${money(d.amount)} — ${d.reason}`;
     case 'vendor.reject':
     case 'vendor.suspend':
+    case 'vendor.close':
       return `${d.vendor_name}${d.reason ? ` — ${d.reason}` : ''}`;
     case 'vendor.approve':
     case 'vendor.reactivate':

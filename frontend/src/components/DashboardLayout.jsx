@@ -4,6 +4,7 @@ import logoMark from '../assets/logo-mark.svg';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../auth/useAuth';
 import { resendEmailVerification } from '../services/api';
+import { initials } from '../utils/format';
 import { AlertIcon, CoinsIcon, HomeIcon, LogoutIcon, MailIcon, MapPinIcon, TagIcon, TicketIcon, UserIcon, WifiIcon } from './icons';
 
 const MENU = [
@@ -102,11 +103,6 @@ function EmailBanner({ user }) {
 const ROLE_LABEL = { vendor: 'Promoteur', employee: 'Employé' };
 
 const dateFormat = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
-function initials(name = '') {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '?';
-}
 
 function capitalize(text) {
   return text.charAt(0).toUpperCase() + text.slice(1);

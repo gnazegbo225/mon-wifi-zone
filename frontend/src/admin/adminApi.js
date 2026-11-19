@@ -135,6 +135,11 @@ export function suspendVendor(id, reason) {
   return request(`/vendors/${encodeURIComponent(id)}/suspend`, { method: 'POST', body: { reason } });
 }
 
+// Fermeture définitive : seulement quand plus rien n'est dû au promoteur (sinon 409 avec les montants).
+export function closeVendor(id, reason) {
+  return request(`/vendors/${encodeURIComponent(id)}/close`, { method: 'POST', body: { reason } });
+}
+
 export function reactivateVendor(id, reason) {
   return request(`/vendors/${encodeURIComponent(id)}/reactivate`, { method: 'POST', body: { reason } });
 }

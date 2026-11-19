@@ -8,14 +8,15 @@ const { employeesWithSales } = require('../vendorEmployees.controller');
 const { notify } = require('../../services/notify');
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const STATUSES = ['pending_review', 'approved', 'rejected', 'suspended'];
+const STATUSES = ['pending_review', 'approved', 'rejected', 'suspended', 'closed'];
 
 // Ce que le super admin vérifie avant d'approuver. Tous les points doivent être cochés.
 const CHECKLIST = ['id_readable', 'name_matches', 'selfie_matches', 'payout_matches'];
 
-const USER_COLUMNS = 'id, email, full_name, phone, country, account_status, created_at, last_login_at, last_seen_at';
+const USER_COLUMNS =
+  'id, email, full_name, phone, country, account_status, created_at, last_login_at, last_seen_at, closed_at, terms_version, terms_accepted_at';
 const PROFILE_COLUMNS =
-  'user_id, legal_name, business_name, city, id_type, id_number, id_front_path, id_back_path, selfie_path, payout_method, payout_phone, bank_name, account_holder, account_number, submitted_at, reviewed_by, reviewed_at, rejection_reason';
+  'user_id, legal_name, business_name, city, id_type, id_number, id_front_path, id_back_path, selfie_path, payout_method, payout_phone, bank_name, account_holder, account_number, submitted_at, reviewed_by, reviewed_at, rejection_reason, documents_purged_at';
 
 const NOT_FOUND = { error: 'Promoteur introuvable.' };
 const ONLINE_MS = 5 * 60 * 1000; // vu dans les 5 dernières minutes = en ligne
@@ -244,6 +245,19 @@ async function changeStatus(req, res, status) {
   return getVendor(req, res);
 }
 
+// POST /api/admin/vendors/:id/close { reason } : ferme le compte, définitivement. Possible seulement quand
+// plus rien n'est dû au promoteur. Ses zones s'arrêtent ; ses pièces d'identité sont supprimées un an après.
+async function closeVendor(req, res) {
+  const { id } = req.params;
+  if (!UUID_REGEX.test(id)) return res.status(404).json(NOT_FOUND);
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason : null;
+  const { httpError } = await callRpc('close_vendor_account', { p_vendor_id: id, p_actor_id: req.user.id, p_reason: reason });
+  if (httpError) return sendHttpError(res, httpError);
+  await record(req, 'vendor.close', { targetType: 'vendor', targetId: id, details: { ...(await vendorLabel(id)), reason: reason.trim() } });
+  notify(id, 'vendorClosed', { reason: reason.trim() });
+  return getVendor(req, res);
+}
+
 // POST /api/admin/vendors/:id/suspend { reason }
 const suspendVendor = (req, res) => changeStatus(req, res, 'suspended');
 // POST /api/admin/vendors/:id/reactivate { reason? }
@@ -272,4 +286,4 @@ async function createAdjustment(req, res) {
   return getVendor(req, res);
 }
 
-module.exports = { listVendors, getVendor, approveVendor, rejectVendor, suspendVendor, reactivateVendor, createAdjustment };
+module.exports = { listVendors, getVendor, approveVendor, rejectVendor, suspendVendor, reactivateVendor, closeVendor, createAdjustment };

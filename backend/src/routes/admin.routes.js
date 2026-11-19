@@ -36,6 +36,7 @@ router.get('/vendors/:id', requireAdmin, vendorsController.getVendor);
 router.post('/vendors/:id/approve', requireAdmin, vendorsController.approveVendor);
 router.post('/vendors/:id/reject', requireAdmin, vendorsController.rejectVendor);
 router.post('/vendors/:id/suspend', requireAdmin, vendorsController.suspendVendor);
+router.post('/vendors/:id/close', requireAdmin, vendorsController.closeVendor);
 router.post('/vendors/:id/reactivate', requireAdmin, vendorsController.reactivateVendor);
 router.post('/vendors/:id/adjustments', requireAdmin, vendorsController.createAdjustment);
 

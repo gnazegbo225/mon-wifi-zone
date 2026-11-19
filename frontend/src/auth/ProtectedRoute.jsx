@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import Spinner from '../components/Spinner';
+import TermsGate from '../components/TermsGate';
 import { useAuth } from './useAuth';
 
 // Laisse passer seulement un utilisateur connecté à l'espace promoteur. Sinon, renvoie vers /connexion
@@ -20,6 +21,9 @@ export default function ProtectedRoute() {
   if (!user) {
     return <Navigate to="/connexion" replace state={{ from: location }} />;
   }
+
+  // Promoteur qui n'a pas encore accepté la version en vigueur des conditions générales.
+  if (user.terms_accepted === false) return <TermsGate />;
 
   return <Outlet />;
 }

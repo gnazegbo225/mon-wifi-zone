@@ -12,3 +12,9 @@ export function formatPhone(phone) {
 export function formatPrice(amount) {
   return `${Number(amount).toLocaleString('fr-FR')} F`;
 }
+
+// « Awa Koné » → « AK ». Sert aux pastilles d'avatar.
+export function initials(name = '') {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return ((parts[0]?.[0] || '') + (parts[1]?.[0] || '')).toUpperCase() || '?';
+}

@@ -2,6 +2,7 @@
 // Après 5 échecs (mot de passe ou code de double authentification), le compte est bloqué 15 minutes.
 const bcrypt = require('bcryptjs');
 const supabase = require('../config/supabase');
+const { BLOCKED_STATUSES } = require('../config/legal');
 
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
@@ -11,7 +12,7 @@ const LOCK_MINUTES = 15;
 const DUMMY_HASH = bcrypt.hashSync('mot-de-passe-factice', 10);
 
 const LOGIN_COLUMNS =
-  'id, email, password_hash, full_name, role, account_status, employer_id, country, failed_logins, locked_until, mfa_secret, mfa_last_step, email_verified_at';
+  'id, email, password_hash, full_name, role, account_status, employer_id, country, failed_logins, locked_until, mfa_secret, mfa_last_step, email_verified_at, terms_version';
 
 function isLocked(user, now = new Date()) {
   return Boolean(user?.locked_until && new Date(user.locked_until) > now);
@@ -66,7 +67,7 @@ async function checkCredentials(email, password, roles) {
     if (user) await registerFailure(user);
     return { invalid: true };
   }
-  if (!roles.includes(user.role) || user.account_status === 'suspended') return { invalid: true };
+  if (!roles.includes(user.role) || BLOCKED_STATUSES.includes(user.account_status)) return { invalid: true };
   return { user };
 }
 

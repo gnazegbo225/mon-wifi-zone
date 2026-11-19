@@ -108,6 +108,12 @@ export function logout() {
   clearToken();
 }
 
+// Accepte la version en vigueur des conditions générales (promoteur) → user
+export async function acceptTerms(version) {
+  const data = await request('/auth/terms/accept', { method: 'POST', body: { version } });
+  return data.user;
+}
+
 // --- Mot de passe oublié et confirmation de l'adresse -----------------------------
 
 // Toujours la même réponse, que le compte existe ou non → { message }

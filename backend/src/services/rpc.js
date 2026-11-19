@@ -44,6 +44,16 @@ const ERRORS = {
   'vendor:bad_transition': [409, 'Ce compte a déjà changé de statut. Recharge la page.'],
   'vendor:not_submitted': [409, 'Ce promoteur n’a pas encore envoyé son dossier.'],
   'vendor:reason_required': [400, 'Écris le motif.', 'reason'],
+  // Fermeture de compte (migration 014)
+  'vendor:already_closed': [409, 'Ce compte est déjà fermé.'],
+  'vendor:payments_in_progress': [409, 'Un client est en train de payer dans une de ses zones. Désactive ses zones, attends 30 minutes, puis réessaie.'],
+  'vendor:balance_not_zero': [
+    409,
+    (detail) => {
+      const [available, pending, inWithdrawal] = String(detail || '').split(',').map(Number);
+      return `On doit encore de l’argent à ce promoteur (disponible ${price(available || 0)}, en attente ${price(pending || 0)}, retraits en cours ${price(inWithdrawal || 0)}). Verse-le ou corrige le solde avant de fermer le compte.`;
+    },
+  ],
   // Zones des employés (migration 011)
   'employee_zone:not_found': [404, 'Employé introuvable.'],
   'employee_zone:not_owned': [400, 'Une de ces zones n’est pas à toi.', 'zone_ids'],

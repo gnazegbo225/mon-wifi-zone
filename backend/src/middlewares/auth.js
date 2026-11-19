@@ -11,6 +11,7 @@
 const jwt = require('jsonwebtoken');
 const env = require('../config/env');
 const supabase = require('../config/supabase');
+const { BLOCKED_STATUSES } = require('../config/legal');
 
 const SPACES = {
   vendor: { secret: () => env.jwtSecret, expiresIn: () => env.jwtExpiresIn, roles: ['vendor', 'employee'] },
@@ -21,7 +22,7 @@ const SPACES = {
 const SEEN_EVERY_MS = 5 * 60 * 1000; // last_seen_at est mis à jour au plus toutes les 5 minutes.
 
 const ACCOUNT_COLUMNS =
-  'id, email, full_name, role, account_status, employer_id, country, last_seen_at, email_verified_at, password_changed_at';
+  'id, email, full_name, role, account_status, employer_id, country, last_seen_at, email_verified_at, password_changed_at, terms_version';
 
 function signToken(space, user) {
   const { secret, expiresIn } = SPACES[space];
@@ -37,7 +38,7 @@ function signToken(space, user) {
 async function loadAccount(space, userId) {
   const { data: user, error } = await supabase.from('users').select(ACCOUNT_COLUMNS).eq('id', userId).maybeSingle();
   if (error) throw error;
-  if (!user || !SPACES[space].roles.includes(user.role) || user.account_status === 'suspended') return null;
+  if (!user || !SPACES[space].roles.includes(user.role) || BLOCKED_STATUSES.includes(user.account_status)) return null;
 
   if (user.role === 'employee') {
     const { data: employer, error: employerError } = await supabase
@@ -46,7 +47,7 @@ async function loadAccount(space, userId) {
       .eq('id', user.employer_id)
       .maybeSingle();
     if (employerError) throw employerError;
-    if (!employer || employer.account_status === 'suspended') return null;
+    if (!employer || BLOCKED_STATUSES.includes(employer.account_status)) return null;
 
     // Zones confiées à l'employé. Aucune : il voit toutes les zones de son promoteur.
     const { data: zones, error: zonesError } = await supabase
@@ -106,6 +107,7 @@ function authenticate(space) {
       accountStatus: user.account_status,
       country: user.country,
       emailVerified: Boolean(user.email_verified_at),
+      termsVersion: user.terms_version || null,
       // Propriétaire des zones sur lesquelles ce compte agit : lui-même, ou son promoteur pour un employé.
       ownerId: user.role === 'employee' ? user.employer_id : user.id,
       // Employé affecté à des zones : il ne voit qu'elles (voir middlewares/scope.js). null = toutes.

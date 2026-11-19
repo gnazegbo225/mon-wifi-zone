@@ -12,6 +12,7 @@ const TABS = [
   { key: 'pending_review', label: 'En attente' },
   { key: 'rejected', label: 'Rejetés' },
   { key: 'suspended', label: 'Suspendus' },
+  { key: 'closed', label: 'Fermés' },
 ];
 
 const STATUS_TONE = {
@@ -19,6 +20,7 @@ const STATUS_TONE = {
   pending_review: 'bg-brand-soft text-brand',
   rejected: 'bg-danger-soft text-danger',
   suspended: 'bg-page text-muted ring-1 ring-line',
+  closed: 'bg-page text-muted ring-1 ring-line',
 };
 
 export default function AdminVendorsPage() {

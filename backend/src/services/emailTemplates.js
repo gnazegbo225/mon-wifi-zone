@@ -131,6 +131,18 @@ const templates = {
     }),
   }),
 
+  vendorClosed: ({ name, reason }) => ({
+    subject: 'Ton compte est fermé',
+    ...layout({
+      title: 'Ton compte est fermé',
+      name,
+      lines: [
+        `Ton compte promoteur est fermé, ainsi que ceux de tes employés, et tes zones ne vendent plus de tickets. Motif : ${reason}`,
+        'Plus aucune somme ne t’est due. Les photos de ta pièce d’identité seront supprimées dans un an ; l’historique de tes ventes et de tes retraits est conservé, comme la loi l’exige.',
+      ],
+    }),
+  }),
+
   withdrawalPaid: ({ name, amount, method, reference }) => ({
     subject: `Ton retrait de ${price(amount)} est payé`,
     ...layout({

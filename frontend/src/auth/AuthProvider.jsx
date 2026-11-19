@@ -48,9 +48,12 @@ export default function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // Remplace le compte en mémoire par celui renvoyé par une action (ex : conditions acceptées).
+  const setCurrentUser = useCallback((fresh) => setUser(fresh), []);
+
   const value = useMemo(
-    () => ({ user, status, signIn, signUp, refreshUser, signOut }),
-    [user, status, signIn, signUp, refreshUser, signOut],
+    () => ({ user, status, signIn, signUp, refreshUser, setCurrentUser, signOut }),
+    [user, status, signIn, signUp, refreshUser, setCurrentUser, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

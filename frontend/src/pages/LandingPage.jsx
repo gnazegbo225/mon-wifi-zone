@@ -1,12 +1,13 @@
 // Page d'accueil publique (monwifizone.org/).
 // Parti pris : beaucoup d'espace, de grands titres, peu de mots, aucun effet décoratif.
-// Seule animation : un fondu discret à l'apparition de chaque bloc (coupé si l'appareil demande moins de mouvement).
+// Animations : un fondu discret à l’apparition de chaque bloc et l’en-tête qui flotte au défilement (coupé si l'appareil demande moins de mouvement).
 import { MotionConfig, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import heroImageSmall from '../assets/hero-720.webp';
 import heroImage from '../assets/hero.webp';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../auth/useAuth';
+import LandingHeader from '../components/LandingHeader';
 
 function Reveal({ children, delay = 0, className = '', as = 'div' }) {
   const Tag = motion[as];
@@ -43,8 +44,6 @@ const VALUES = [
 
 export default function LandingPage() {
   const { user } = useAuth();
-  const spaceLink = user ? '/espace' : '/connexion';
-  const spaceLabel = user ? 'Mon tableau de bord' : 'Espace gérant';
   // Bouton principal : s'inscrire si on n'a pas encore de compte.
   const ctaLink = user ? '/espace' : '/inscription';
   const ctaLabel = user ? 'Mon tableau de bord' : 'Devenir promoteur';
@@ -52,28 +51,7 @@ export default function LandingPage() {
   return (
     <MotionConfig reducedMotion="user">
       <div className="min-h-dvh bg-white text-ink">
-        {/* En-tête */}
-        <header className="sticky top-0 z-30 border-b border-line/60 bg-white/80 backdrop-blur-xl">
-          <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-5 lg:px-10">
-            <Link to="/" aria-label="monwifizone, accueil">
-              <img src={logo} alt="monwifizone" className="h-7 w-auto" />
-            </Link>
-            <nav className="hidden items-center gap-10 text-sm text-muted md:flex">
-              <a href="#services" className="transition hover:text-ink">
-                Services
-              </a>
-              <a href="#fonctionnement" className="transition hover:text-ink">
-                Fonctionnement
-              </a>
-              <a href="#a-propos" className="transition hover:text-ink">
-                À propos
-              </a>
-            </nav>
-            <Link to={spaceLink} className="text-sm font-bold text-brand transition hover:text-brand-hover">
-              {spaceLabel}
-            </Link>
-          </div>
-        </header>
+        <LandingHeader />
 
         {/* Héros */}
         <section className="mx-auto max-w-7xl px-5 pt-20 lg:px-10 lg:pt-28">
@@ -113,7 +91,7 @@ export default function LandingPage() {
         </section>
 
         {/* Services */}
-        <section id="services" className="scroll-mt-14">
+        <section id="services" className="scroll-mt-20">
           <div className="mx-auto max-w-7xl px-5 py-28 lg:px-10 lg:py-40">
             <Reveal className="max-w-3xl">
               <Eyebrow>Services</Eyebrow>
@@ -189,7 +167,7 @@ export default function LandingPage() {
         </section>
 
         {/* Fonctionnement */}
-        <section id="fonctionnement" className="scroll-mt-14 bg-brand text-white">
+        <section id="fonctionnement" className="scroll-mt-20 bg-brand text-white">
           <div className="mx-auto max-w-7xl px-5 py-28 lg:px-10 lg:py-40">
             <Reveal className="max-w-3xl">
               <Eyebrow light>Fonctionnement</Eyebrow>
@@ -222,7 +200,7 @@ export default function LandingPage() {
         </section>
 
         {/* À propos */}
-        <section id="a-propos" className="scroll-mt-14">
+        <section id="a-propos" className="scroll-mt-20">
           <div className="mx-auto grid max-w-7xl gap-16 px-5 py-28 lg:grid-cols-2 lg:gap-24 lg:px-10 lg:py-40">
             <Reveal>
               <Eyebrow>À propos</Eyebrow>
@@ -267,7 +245,12 @@ export default function LandingPage() {
         <footer className="border-t border-line">
           <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-5 py-8 text-sm text-muted sm:flex-row sm:justify-between lg:px-10">
             <img src={logo} alt="monwifizone" className="h-6 w-auto" />
-            <p>© {new Date().getFullYear()} monwifizone · Lumière d’Afrique Energy</p>
+            <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+              <span>© {new Date().getFullYear()} monwifizone · Lumière d’Afrique Energy</span>
+              <Link to="/conditions-promoteurs" className="underline underline-offset-2 hover:text-brand">
+                Conditions générales des promoteurs
+              </Link>
+            </p>
           </div>
         </footer>
       </div>

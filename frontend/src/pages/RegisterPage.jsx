@@ -18,13 +18,14 @@ function check(form) {
   const local = digits.startsWith('225') && digits.length === 13 ? digits.slice(3) : digits;
   if (local.length !== 10) return { field: 'phone', message: 'Ce numéro n’est pas complet. Il faut 10 chiffres.' };
   if (form.password.length < 8) return { field: 'password', message: 'Ton mot de passe doit avoir au moins 8 caractères.' };
+  if (!form.accept_terms) return { field: 'accept_terms', message: 'Lis et accepte les conditions générales pour créer ton compte.' };
   return null;
 }
 
 export default function RegisterPage() {
   const { user, signUp } = useAuth();
   const [countries, setCountries] = useState(null);
-  const [form, setForm] = useState({ full_name: '', email: '', phone: '', password: '', country: 'CI' });
+  const [form, setForm] = useState({ full_name: '', email: '', phone: '', password: '', country: 'CI', accept_terms: false });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null); // { field, message }
   const [submitting, setSubmitting] = useState(false);
@@ -137,6 +138,30 @@ export default function RegisterPage() {
             Pays : <span className="font-bold text-ink">{countryName || 'Côte d’Ivoire'}</span>. La plateforme est ouverte en
             Côte d’Ivoire pour l’instant.
           </p>
+
+          <label
+            className={`flex cursor-pointer items-start gap-3 rounded-2xl border bg-white px-4 py-3 text-sm text-ink ${
+              error?.field === 'accept_terms' ? 'border-danger' : 'border-line'
+            }`}
+          >
+            <input
+              id="accept_terms"
+              type="checkbox"
+              checked={form.accept_terms}
+              onChange={(e) => {
+                setForm((f) => ({ ...f, accept_terms: e.target.checked }));
+                if (error?.field === 'accept_terms') setError(null);
+              }}
+              className="mt-0.5 size-5 shrink-0 cursor-pointer accent-brand"
+            />
+            <span>
+              J’ai lu et j’accepte les{' '}
+              <Link to="/conditions-promoteurs" target="_blank" className="font-bold text-brand underline underline-offset-2">
+                conditions générales des promoteurs
+              </Link>
+              , dont la commission de 8 % et le traitement de mes données personnelles.
+            </span>
+          </label>
 
           <button
             type="submit"

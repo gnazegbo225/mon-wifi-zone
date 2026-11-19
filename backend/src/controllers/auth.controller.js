@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const supabase = require('../config/supabase');
 const { signToken } = require('../middlewares/auth');
 const env = require('../config/env');
+const { BLOCKED_STATUSES, TERMS_VERSION } = require('../config/legal');
 const { changeEmail, checkCredentials, findByEmail, findById, registerSuccess, LOCKED_MESSAGE } = require('../services/accounts');
 const { consumeToken, countRecent, createToken } = require('../services/accountTokens');
 const { sendEmail } = require('../services/email');
@@ -23,6 +24,9 @@ function publicUser(user) {
     country: user.country,
     // Adresse confirmée par le lien reçu par email : exigée pour retirer de l'argent.
     email_verified: Boolean(user.email_verified_at),
+    // Le promoteur a accepté la version en vigueur des conditions générales (sinon : écran d'acceptation).
+    terms_accepted: user.role !== 'vendor' || user.terms_version === TERMS_VERSION,
+    terms_version: TERMS_VERSION,
   };
 }
 
@@ -47,7 +51,7 @@ async function login(req, res) {
       .eq('id', user.employer_id)
       .maybeSingle();
     if (error) throw error;
-    if (!employer || employer.account_status === 'suspended') {
+    if (!employer || BLOCKED_STATUSES.includes(employer.account_status)) {
       return res.status(401).json({ error: 'Identifiants incorrects' });
     }
   }
@@ -90,6 +94,10 @@ async function register(req, res) {
   if (typeof b.password !== 'string' || b.password.length < 8 || b.password.length > 72) {
     return res.status(400).json({ error: 'Ton mot de passe doit avoir au moins 8 caractères.', field: 'password' });
   }
+  // La case « J'accepte les conditions générales » est obligatoire ; la version acceptée est enregistrée.
+  if (b.accept_terms !== true) {
+    return res.status(400).json({ error: 'Lis et accepte les conditions générales pour créer ton compte.', field: 'accept_terms' });
+  }
 
   const country = text(b.country).toUpperCase();
   const { data: allowed, error: countryError } = await supabase
@@ -124,8 +132,10 @@ async function register(req, res) {
       account_status: 'pending_review',
       country,
       phone,
+      terms_version: TERMS_VERSION,
+      terms_accepted_at: new Date().toISOString(),
     })
-    .select('id, email, full_name, role, account_status, country, email_verified_at')
+    .select('id, email, full_name, role, account_status, country, email_verified_at, terms_version')
     .single();
   // 23505 : le même email inscrit au même instant par une autre requête.
   if (error?.code === '23505') {
@@ -153,6 +163,33 @@ async function me(req, res) {
       account_status: u.accountStatus,
       country: u.country,
       email_verified_at: u.emailVerified ? true : null,
+      terms_version: u.termsVersion,
+    }),
+  });
+}
+
+// POST /api/auth/terms/accept { version } (promoteur) : accepte la version en vigueur des conditions générales.
+// La version envoyée doit être celle en vigueur : on n'accepte pas un texte que le promoteur n'a pas vu.
+async function acceptTerms(req, res) {
+  if (req.body?.version !== TERMS_VERSION) {
+    return res.status(409).json({ error: 'Les conditions ont changé entre-temps. Recharge la page pour lire la nouvelle version.' });
+  }
+  const { error } = await supabase
+    .from('users')
+    .update({ terms_version: TERMS_VERSION, terms_accepted_at: new Date().toISOString() })
+    .eq('id', req.user.id);
+  if (error) throw error;
+  const u = req.user;
+  res.json({
+    user: publicUser({
+      id: u.id,
+      email: u.email,
+      full_name: u.fullName,
+      role: u.role,
+      account_status: u.accountStatus,
+      country: u.country,
+      email_verified_at: u.emailVerified ? true : null,
+      terms_version: TERMS_VERSION,
     }),
   });
 }
@@ -176,6 +213,7 @@ async function updateEmail(req, res) {
       account_status: req.user.accountStatus,
       country: req.user.country,
       email_verified_at: null,
+      terms_version: req.user.termsVersion,
     }),
   });
 }
@@ -195,7 +233,7 @@ async function forgotPassword(req, res) {
     return res.status(400).json({ error: 'Cet email semble incomplet. Vérifie-le.', field: 'email' });
   }
   const user = await findByEmail(email);
-  if (user && user.role === 'vendor' && user.account_status !== 'suspended') {
+  if (user && user.role === 'vendor' && !BLOCKED_STATUSES.includes(user.account_status)) {
     // Sans attendre : la réponse prend le même temps, que le compte existe ou non.
     sendResetLink(user).catch((err) => console.error(`Lien de mot de passe non envoyé au compte ${user.id} :`, err.message));
   }
@@ -221,7 +259,7 @@ async function resetPassword(req, res) {
   const used = await consumeToken(req.body?.token, 'password_reset');
   if (!used) return res.status(400).json(expired);
   const user = await findById(used.user_id);
-  if (!user || user.role !== 'vendor' || user.account_status === 'suspended') return res.status(400).json(expired);
+  if (!user || user.role !== 'vendor' || BLOCKED_STATUSES.includes(user.account_status)) return res.status(400).json(expired);
 
   const { error } = await supabase
     .from('users')
@@ -266,4 +304,4 @@ async function resendVerification(req, res) {
   res.json({ ok: true, email: req.user.email });
 }
 
-module.exports = { login, me, register, listCountries, updateEmail, forgotPassword, resetPassword, verifyEmail, resendVerification };
+module.exports = { login, me, register, listCountries, updateEmail, acceptTerms, forgotPassword, resetPassword, verifyEmail, resendVerification };
