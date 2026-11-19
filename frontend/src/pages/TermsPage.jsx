@@ -11,7 +11,7 @@ const SECTIONS = [
     title: 'Objet',
     body: [
       `Les présentes conditions générales encadrent l’utilisation de la plateforme ${COMPANY.website} (la « Plateforme ») par les personnes qui y vendent des tickets d’accès à Internet par WiFi (les « Promoteurs »).`,
-      `La Plateforme est éditée par ${COMPANY.name}, ${COMPANY.legalForm}, immatriculée au RCCM sous le numéro ${COMPANY.rccm}, dont le siège est situé ${COMPANY.address} (l’« Éditeur »).`,
+      `La Plateforme est éditée et exploitée par monwifizone (l’« Éditeur »), joignable à l’adresse ${COMPANY.email}.`,
       'En créant un compte, le Promoteur déclare avoir lu et accepté ces conditions. Il les accepte de nouveau à chaque nouvelle version.',
     ],
   },
@@ -187,7 +187,7 @@ export default function TermsPage() {
 
       <footer className="border-t border-line">
         <p className="mx-auto max-w-3xl px-5 py-8 text-sm text-muted">
-          © {new Date().getFullYear()} monwifizone · {COMPANY.name}
+          © {new Date().getFullYear()} monwifizone
         </p>
       </footer>
     </div>

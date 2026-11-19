@@ -210,7 +210,7 @@ export default function LandingPage() {
             </Reveal>
             <Reveal delay={0.1} className="lg:pt-10">
               <p className="text-xl leading-relaxed text-ink">
-                monwifizone est né en Côte d’Ivoire, chez Lumière d’Afrique Energy. Une idée simple : un gérant doit
+                monwifizone est né en Côte d’Ivoire. Une idée simple : un gérant doit
                 pouvoir vendre ses tickets sans être sur place, et chaque client doit se connecter en quelques secondes,
                 avec le Mobile Money qu’il utilise déjà.
               </p>
@@ -246,7 +246,7 @@ export default function LandingPage() {
           <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-5 py-8 text-sm text-muted sm:flex-row sm:justify-between lg:px-10">
             <img src={logo} alt="monwifizone" className="h-6 w-auto" />
             <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-              <span>© {new Date().getFullYear()} monwifizone · Lumière d’Afrique Energy</span>
+              <span>© {new Date().getFullYear()} monwifizone</span>
               <Link to="/conditions-promoteurs" className="underline underline-offset-2 hover:text-brand">
                 Conditions générales des promoteurs
               </Link>
