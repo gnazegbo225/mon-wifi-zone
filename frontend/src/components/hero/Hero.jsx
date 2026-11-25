@@ -162,7 +162,7 @@ export default function Hero({ ctaLink, ctaLabel }) {
   return (
     <section id="top" aria-labelledby="hero-title" className="mw-hero-bg relative isolate -mt-14 overflow-x-clip pt-14">
       <HeroFloor />
-      <div className="mx-auto grid max-w-7xl items-center gap-6 px-5 pt-8 pb-16 lg:min-h-[calc(100dvh-3.5rem)] lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12 lg:px-10 lg:py-10 xl:gap-16">
+      <div className="mx-auto grid max-w-7xl items-center gap-6 px-5 pt-8 pb-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-12 lg:px-10 lg:pt-14 lg:pb-0 xl:gap-16">
         <HeroCopy ctaLink={ctaLink} ctaLabel={ctaLabel} />
         <CoreVisual />
       </div>

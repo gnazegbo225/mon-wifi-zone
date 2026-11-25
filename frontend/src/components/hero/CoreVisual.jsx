@@ -111,7 +111,7 @@ export default function CoreVisual() {
         ref={visualRef}
         onPointerMove={handlePointerMove}
         onPointerLeave={handlePointerLeave}
-        className="mw-enter @container relative -my-[6%] -ml-[12.5%] aspect-square w-[125%] max-w-none md:mx-auto md:my-0 md:w-full md:max-w-[840px] lg:mx-0 lg:w-[104%] lg:max-w-none"
+        className="mw-enter @container relative -my-[6%] -ml-[12.5%] aspect-square w-[125%] max-w-none md:mx-auto md:my-0 md:w-full md:max-w-[840px] lg:mx-0 lg:-mb-[7%] lg:w-[104%] lg:max-w-none"
       >
         <div className="absolute inset-0">
           <div aria-hidden="true" className="mw-halo pointer-events-none absolute inset-[6%]" />

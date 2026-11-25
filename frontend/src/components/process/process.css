@@ -1,0 +1,98 @@
+/* Styles de la section « Fonctionnement » (chargés avec la page d'accueil seulement). */
+
+/* Grille isométrique du hero, nette au centre et effacée sur les bords. */
+.proc-floor {
+  opacity: 0.45;
+  -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 58%, #000 25%, transparent 100%);
+  mask-image: radial-gradient(ellipse 70% 65% at 50% 58%, #000 25%, transparent 100%);
+}
+
+.proc-glow {
+  background:
+    radial-gradient(ellipse 45% 40% at 50% 55%, rgb(255 138 0 / 0.07) 0%, rgb(255 138 0 / 0) 70%),
+    radial-gradient(ellipse 60% 55% at 50% 50%, rgb(255 255 255 / 0.9) 0%, rgb(255 255 255 / 0) 70%);
+}
+
+/* Curseur du champ en cours de saisie. */
+.proc-caret {
+  animation: proc-blink 900ms steps(1) infinite;
+}
+
+@keyframes proc-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Onde au point d'impact du repère de la zone. */
+.proc-ripple {
+  animation: proc-ripple 1200ms cubic-bezier(0.25, 0.1, 0.25, 1) 3.3s backwards;
+  opacity: 0;
+}
+
+@keyframes proc-ripple {
+  from {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+/* Ondes du routeur, en continu. */
+.proc-wave {
+  animation: proc-wave 2.4s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+  opacity: 0;
+}
+
+.proc-wave-2 {
+  animation-delay: 1.2s;
+}
+
+@keyframes proc-wave {
+  from {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+/* Le point qui va de « il se connecte » à « il navigue ». */
+.proc-travel {
+  animation: proc-travel 3.6s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+}
+
+@keyframes proc-travel {
+  0% {
+    left: 16.66%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    left: 83.33%;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proc-caret,
+  .proc-ripple,
+  .proc-wave,
+  .proc-travel {
+    animation: none;
+  }
+
+  .proc-travel {
+    display: none;
+  }
+}

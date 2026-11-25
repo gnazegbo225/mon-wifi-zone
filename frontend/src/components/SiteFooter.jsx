@@ -59,7 +59,7 @@ export default function SiteFooter({
 
   return (
     <footer className="border-t border-line bg-white">
-      <div className="mx-auto max-w-7xl px-5 pt-16 lg:px-10 lg:pt-24">
+      <div className="mx-auto max-w-7xl px-5 pt-12 lg:px-10 lg:pt-16">
         <div className="flex flex-col gap-12 lg:flex-row lg:justify-between lg:gap-20">
           {/* Marque */}
           <div className="flex max-w-sm flex-col gap-5">
@@ -100,7 +100,7 @@ export default function SiteFooter({
         </div>
 
         {/* Ligne du bas */}
-        <div className="mt-16 flex flex-col gap-4 border-t border-line py-8 text-sm text-muted md:flex-row md:items-center md:justify-between">
+        <div className="mt-12 flex flex-col gap-4 border-t border-line py-8 text-sm text-muted md:flex-row md:items-center md:justify-between">
           <p className="order-2 md:order-1">© {year} monwifizone. Tous droits réservés.</p>
           <ul className="order-1 flex flex-wrap gap-x-6 gap-y-2 md:order-2">
             {legalLinks.map((link) => (

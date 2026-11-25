@@ -8,6 +8,7 @@ import LandingHeader from '../components/LandingHeader';
 import { ArrowRightIcon } from '../components/icons';
 import FlipLabel from '../components/hero/FlipLabel';
 import Hero from '../components/hero/Hero';
+import ProcessSection from '../components/process/ProcessSection';
 import SiteFooter from '../components/SiteFooter';
 
 function Reveal({ children, delay = 0, className = '', as = 'div' }) {
@@ -26,16 +27,9 @@ function Reveal({ children, delay = 0, className = '', as = 'div' }) {
 }
 
 // Petit libellé au-dessus des titres de section.
-function Eyebrow({ children, light = false }) {
-  return <p className={`text-sm font-bold ${light ? 'text-white/60' : 'text-muted'}`}>{children}</p>;
+function Eyebrow({ children }) {
+  return <p className="text-sm font-bold text-muted">{children}</p>;
 }
-
-const STEPS = [
-  { title: 'Ajoute ta zone', text: 'Son nom, sa ville, l’adresse de ton routeur.' },
-  { title: 'Crée tes forfaits', text: 'Fixe tes prix et importe tes tickets MikroTik.' },
-  { title: 'Installe ton portail', text: 'Ta page de connexion et ta liste blanche, prêtes à coller.' },
-  { title: 'Encaisse', text: 'Tes clients payent. Le ticket arrive tout seul.' },
-];
 
 const VALUES = [
   { title: 'Simple', text: 'Pensé pour le téléphone. Rien à apprendre.' },
@@ -58,7 +52,7 @@ export default function LandingPage() {
 
         {/* Services */}
         <section id="services" className="scroll-mt-20">
-          <div className="mx-auto max-w-7xl px-5 py-28 lg:px-10 lg:py-40">
+          <div className="mx-auto max-w-7xl px-5 pt-10 pb-16 lg:px-10 lg:pt-12 lg:pb-24">
             <Reveal className="max-w-3xl">
               <Eyebrow>Services</Eyebrow>
               <h2 className="text-balance mt-3 text-4xl leading-tight font-bold tracking-tight text-brand lg:text-6xl">
@@ -66,7 +60,7 @@ export default function LandingPage() {
               </h2>
             </Reveal>
 
-            <div className="mt-16 grid gap-5 lg:grid-cols-3">
+            <div className="mt-10 grid gap-5 lg:mt-12 lg:grid-cols-3">
               {/* Paiement — grande tuile */}
               <Reveal className="flex flex-col justify-between gap-12 rounded-[28px] bg-page p-8 lg:col-span-2 lg:p-12">
                 <div className="max-w-md">
@@ -132,49 +126,18 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Fonctionnement */}
-        <section id="fonctionnement" className="scroll-mt-20 bg-brand text-white">
-          <div className="mx-auto max-w-7xl px-5 py-28 lg:px-10 lg:py-40">
-            <Reveal className="max-w-3xl">
-              <Eyebrow light>Fonctionnement</Eyebrow>
-              <h2 className="text-balance mt-3 text-4xl leading-tight font-bold tracking-tight lg:text-6xl">
-                Prêt en quatre étapes.
-              </h2>
-            </Reveal>
-
-            <ol className="mt-20 grid gap-12 sm:grid-cols-2 lg:grid-cols-4 lg:gap-0">
-              {STEPS.map(({ title, text }, i) => (
-                <Reveal
-                  key={title}
-                  as="li"
-                  delay={i * 0.08}
-                  className="border-t border-white/15 pt-6 lg:border-t-0 lg:border-l lg:px-8 lg:pt-0 lg:first:border-l-0 lg:first:pl-0"
-                >
-                  <p className="text-5xl font-bold text-accent lg:text-6xl">{i + 1}</p>
-                  <h3 className="mt-8 text-xl font-bold">{title}</h3>
-                  <p className="mt-2 text-white/70">{text}</p>
-                </Reveal>
-              ))}
-            </ol>
-
-            <Reveal className="mt-24 max-w-2xl border-t border-white/15 pt-10">
-              <p className="text-2xl leading-snug font-bold lg:text-3xl">
-                Pour ton client, c’est encore plus simple : il se connecte, il paye, il navigue.
-              </p>
-            </Reveal>
-          </div>
-        </section>
+        <ProcessSection />
 
         {/* À propos */}
         <section id="a-propos" className="scroll-mt-20">
-          <div className="mx-auto grid max-w-7xl gap-16 px-5 py-28 lg:grid-cols-2 lg:gap-24 lg:px-10 lg:py-40">
+          <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 lg:grid-cols-2 lg:gap-x-24 lg:gap-y-12 lg:px-10 lg:py-24">
             <Reveal>
               <Eyebrow>À propos</Eyebrow>
               <h2 className="text-balance mt-3 text-4xl leading-tight font-bold tracking-tight text-brand lg:text-6xl">
                 Internet, accessible à chacun.
               </h2>
             </Reveal>
-            <Reveal delay={0.1} className="lg:pt-10">
+            <Reveal delay={0.1} className="lg:pt-8">
               <p className="text-xl leading-relaxed text-ink">
                 monwifizone est né en Côte d’Ivoire. Une idée simple : un gérant doit
                 pouvoir vendre ses tickets sans être sur place, et chaque client doit se connecter en quelques secondes,
@@ -195,7 +158,7 @@ export default function LandingPage() {
 
         {/* Appel final */}
         <section className="bg-page">
-          <Reveal className="mx-auto max-w-3xl px-5 py-28 text-center lg:py-36">
+          <Reveal className="mx-auto max-w-3xl px-5 py-16 text-center lg:py-24">
             <h2 className="text-balance text-4xl leading-tight font-bold tracking-tight text-brand lg:text-6xl">
               Ta zone, ouverte jour et nuit.
             </h2>
