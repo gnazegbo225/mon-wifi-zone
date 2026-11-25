@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../auth/useAuth';
 import { initials } from '../utils/format';
+import FlipLabel from './hero/FlipLabel';
 import { CloseIcon, HomeIcon, LogoutIcon, MenuIcon } from './icons';
 
 const LINKS = [
@@ -161,7 +162,10 @@ export default function LandingHeader() {
         className={`sticky z-40 mx-auto w-full border-b transition-all duration-300 ease-out motion-reduce:transition-none md:border ${
           floating
             ? 'top-0 border-line/70 bg-white/85 backdrop-blur-xl md:top-4 md:max-w-4xl md:rounded-2xl md:shadow-lg md:shadow-brand/10'
-            : 'top-0 border-transparent bg-white/90 backdrop-blur-xl md:max-w-7xl'
+            : open
+              ? 'top-0 border-line bg-white md:max-w-7xl'
+              : // Tout en haut : transparent, le fond du hero passe dessous.
+                'top-0 border-transparent bg-transparent md:max-w-7xl'
         }`}
       >
         <div
@@ -188,9 +192,9 @@ export default function LandingHeader() {
                 <>
                   <Link
                     to="/espace"
-                    className="hidden rounded-full bg-brand px-5 py-2 text-sm font-bold whitespace-nowrap text-white transition hover:bg-brand-hover lg:inline-block"
+                    className="mw-flip hidden h-10 items-center rounded-full bg-brand px-5 text-sm font-bold whitespace-nowrap text-white transition-colors hover:bg-brand-hover lg:inline-flex"
                   >
-                    Mon tableau de bord
+                    <FlipLabel>Mon tableau de bord</FlipLabel>
                   </Link>
                   <AccountMenu user={user} onSignOut={handleSignOut} />
                 </>
@@ -204,9 +208,9 @@ export default function LandingHeader() {
                   </Link>
                   <Link
                     to="/inscription"
-                    className="rounded-full bg-brand px-5 py-2 text-sm font-bold whitespace-nowrap text-white transition hover:bg-brand-hover"
+                    className="mw-flip inline-flex h-10 items-center rounded-full bg-brand px-5 text-sm font-bold whitespace-nowrap text-white transition-colors hover:bg-brand-hover"
                   >
-                    Devenir promoteur
+                    <FlipLabel>Devenir promoteur</FlipLabel>
                   </Link>
                 </>
               ))}

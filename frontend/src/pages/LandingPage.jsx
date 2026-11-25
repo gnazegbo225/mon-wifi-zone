@@ -1,13 +1,14 @@
 // Page d'accueil publique (monwifizone.org/).
-// Parti pris : beaucoup d'espace, de grands titres, peu de mots, aucun effet décoratif.
-// Animations : un fondu discret à l’apparition de chaque bloc et l’en-tête qui flotte au défilement (coupé si l'appareil demande moins de mouvement).
+// Parti pris : beaucoup d'espace, de grands titres, peu de mots. Seul le hero porte un visuel animé (components/hero).
+// Animations : un fondu discret à l’apparition de chaque bloc, l’en-tête qui flotte au défilement (coupé si l'appareil demande moins de mouvement).
 import { MotionConfig, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import heroImageSmall from '../assets/hero-720.webp';
-import heroImage from '../assets/hero.webp';
-import logo from '../assets/logo.svg';
 import { useAuth } from '../auth/useAuth';
 import LandingHeader from '../components/LandingHeader';
+import { ArrowRightIcon } from '../components/icons';
+import FlipLabel from '../components/hero/FlipLabel';
+import Hero from '../components/hero/Hero';
+import SiteFooter from '../components/SiteFooter';
 
 function Reveal({ children, delay = 0, className = '', as = 'div' }) {
   const Tag = motion[as];
@@ -53,42 +54,7 @@ export default function LandingPage() {
       <div className="min-h-dvh bg-white text-ink">
         <LandingHeader />
 
-        {/* Héros */}
-        <section className="mx-auto max-w-7xl px-5 pt-20 lg:px-10 lg:pt-28">
-          <Reveal className="mx-auto max-w-4xl text-center">
-            <h1 className="text-balance text-5xl leading-[1.05] font-bold tracking-tight text-brand sm:text-6xl lg:text-7xl">
-              Le WiFi qui se vend tout seul.
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg text-muted sm:text-xl">
-              Tickets, paiement Mobile Money et portail captif. Une seule plateforme pour tes zones WiFi.
-            </p>
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row sm:gap-8">
-              <Link
-                to={ctaLink}
-                className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:bg-brand-hover"
-              >
-                {ctaLabel}
-              </Link>
-              <a href="#services" className="font-bold text-brand transition hover:text-brand-hover">
-                Découvrir ›
-              </a>
-            </div>
-          </Reveal>
-
-          <Reveal delay={0.15} className="mt-16 lg:mt-20">
-            <img
-              src={heroImage}
-              srcSet={`${heroImageSmall} 720w, ${heroImage} 1200w`}
-              sizes="(min-width: 1280px) 1200px, 100vw"
-              width="1200"
-              height="900"
-              alt="Un gérant de zone WiFi configure son routeur depuis son ordinateur portable."
-              fetchPriority="high"
-              className="aspect-[4/3] w-full rounded-[28px] object-cover sm:aspect-[16/9]"
-              style={{ objectPosition: 'center 45%' }}
-            />
-          </Reveal>
-        </section>
+        <Hero ctaLink={ctaLink} ctaLabel={ctaLabel} />
 
         {/* Services */}
         <section id="services" className="scroll-mt-20">
@@ -235,24 +201,17 @@ export default function LandingPage() {
             </h2>
             <Link
               to={ctaLink}
-              className="mt-10 inline-block rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:bg-brand-hover"
+              className="mw-flip mt-10 inline-flex h-14 items-center rounded-full bg-brand px-7 font-bold text-white transition-colors hover:bg-brand-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
             >
-              {ctaLabel}
+              <FlipLabel className="gap-2.5">
+                {ctaLabel}
+                <ArrowRightIcon className="size-5" />
+              </FlipLabel>
             </Link>
           </Reveal>
         </section>
 
-        <footer className="border-t border-line">
-          <div className="mx-auto flex max-w-7xl flex-col items-center gap-3 px-5 py-8 text-sm text-muted sm:flex-row sm:justify-between lg:px-10">
-            <img src={logo} alt="monwifizone" className="h-6 w-auto" />
-            <p className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-              <span>© {new Date().getFullYear()} monwifizone</span>
-              <Link to="/conditions-promoteurs" className="underline underline-offset-2 hover:text-brand">
-                Conditions générales des promoteurs
-              </Link>
-            </p>
-          </div>
-        </footer>
+        <SiteFooter />
       </div>
     </MotionConfig>
   );

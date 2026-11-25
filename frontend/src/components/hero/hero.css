@@ -1,0 +1,226 @@
+/* Styles du hero de la page d'accueil, chargés seulement avec elle.
+   Couleurs de brand/charte.md : bleu nuit #0F2A5C, orange #FF8A00 (formes seulement), fond #F7F8FA. */
+
+.mw-hero-bg {
+  --mw-float: 10;
+  --mw-float-seconds: 6.5s;
+  background:
+    linear-gradient(to bottom, rgb(255 255 255 / 0) 84%, #fff 100%),
+    radial-gradient(ellipse 60% 70% at 74% 52%, rgb(255 255 255 / 0.95) 0%, rgb(255 255 255 / 0) 70%),
+    radial-gradient(ellipse 40% 45% at 78% 58%, rgb(255 138 0 / 0.07) 0%, rgb(255 138 0 / 0) 70%),
+    radial-gradient(ellipse 50% 40% at 100% 0%, rgb(231 236 245 / 0.8) 0%, rgb(231 236 245 / 0) 70%),
+    #f7f8fa;
+}
+
+.mw-halo {
+  border-radius: 9999px;
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.9), rgb(255 255 255 / 0));
+}
+
+/* ---------- Grille au sol : nette sous le visuel et en bas, effacée en haut à gauche sous le titre ---------- */
+.mw-floor,
+.mw-floor-lit {
+  --mw-floor-area: radial-gradient(ellipse 75% 80% at 72% 70%, #000 20%, transparent 100%);
+  --mw-floor-edges: linear-gradient(to left, transparent 0%, #000 22%), linear-gradient(to top, transparent 0%, #000 28%);
+  -webkit-mask-image: var(--mw-floor-area), var(--mw-floor-edges);
+  mask-image: var(--mw-floor-area), var(--mw-floor-edges);
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+}
+
+.mw-floor {
+  opacity: 0.4;
+}
+
+/* Le halo : une fenêtre ronde sur une copie orange de la grille. Tout bouge par transform seulement. */
+.mw-floor-spot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  transition: opacity 400ms ease;
+  will-change: transform, opacity;
+  -webkit-mask-image: radial-gradient(closest-side, #000 0%, transparent 100%);
+  mask-image: radial-gradient(closest-side, #000 0%, transparent 100%);
+}
+
+.mw-floor-lit {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
+
+[data-spot='on'] > .mw-floor-spot {
+  opacity: 0.6;
+}
+
+@media (max-width: 1023px) {
+  .mw-floor,
+  .mw-floor-lit {
+    --mw-floor-area: radial-gradient(ellipse 90% 60% at 50% 75%, #000 20%, transparent 100%);
+  }
+}
+
+/* Les orbites et les lignes de construction s'effacent vers le texte au lieu de passer dessous. */
+.mw-fade-edge {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 14%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 14%);
+}
+
+@media (max-width: 1023px) {
+  .mw-fade-edge {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+
+/* ---------- Libellés qui tournent comme un cube au survol ---------- */
+.mw-flip {
+  perspective: 600px;
+}
+
+.mw-flip-box {
+  --d: 0.75em;
+  display: inline-grid;
+  transform-style: preserve-3d;
+  transform: translateZ(calc(var(--d) * -1)) rotateX(0deg);
+  transition: transform 550ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mw-flip-face {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  height: 1.5em;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.5em;
+  backface-visibility: hidden;
+  transform: translateZ(var(--d));
+}
+
+.mw-flip-back {
+  transform: rotateX(-90deg) translateZ(var(--d));
+}
+
+.mw-flip:hover .mw-flip-box,
+.mw-flip:focus-visible .mw-flip-box {
+  transform: translateZ(calc(var(--d) * -1)) rotateX(90deg);
+}
+
+/* ---------- Point orange devant le libellé ---------- */
+.mw-dot {
+  box-shadow: 0 0 0 4px rgb(255 138 0 / 0.16);
+}
+
+/* ---------- Apparition : même durée et même courbe que les fondus de la page (Reveal) ---------- */
+/* En CSS et non en JS : le titre s'affiche dès le premier rendu. Remplissage `backwards`, pas `both`. */
+.mw-rise {
+  animation: mw-rise 800ms cubic-bezier(0.25, 0.1, 0.25, 1) backwards;
+}
+
+.mw-enter {
+  animation: mw-enter 1100ms cubic-bezier(0.25, 0.1, 0.25, 1) 250ms backwards;
+}
+
+@keyframes mw-rise {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+}
+
+@keyframes mw-enter {
+  from {
+    opacity: 0;
+    scale: 0.97;
+  }
+}
+
+/* Le trait orange sous « tout seul. » se dessine après l'arrivée du titre. */
+.mw-underline {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: mw-draw 900ms cubic-bezier(0.25, 0.1, 0.25, 1) 700ms backwards;
+}
+
+@keyframes mw-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+/* ---------- Mouvement de l'objet : lent, et jamais sur la même propriété qu'un script ---------- */
+@keyframes mw-float {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(var(--mw-float, 6) * -1px));
+  }
+}
+
+.mw-float {
+  animation: mw-float var(--mw-float-seconds, 6.5s) ease-in-out infinite alternate;
+}
+
+@keyframes mw-seam {
+  from {
+    opacity: 0.78;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.mw-seam-pulse {
+  animation: mw-seam 4.8s ease-in-out infinite alternate;
+}
+
+/* ---------- Cartes des étapes : verre clair qui masque les lignes derrière le texte ---------- */
+.mw-stage-card {
+  border: 1px solid rgb(15 42 92 / 0.08);
+  border-radius: 1.1em;
+  background: rgb(255 255 255 / 0.86);
+  box-shadow:
+    0 1px 2px rgb(15 42 92 / 0.05),
+    0 14px 34px -18px rgb(15 42 92 / 0.28),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  transition:
+    border-color 300ms ease,
+    box-shadow 300ms ease;
+}
+
+.mw-stage-card-main {
+  border-color: rgb(255 138 0 / 0.3);
+}
+
+.mw-stage-card-lit {
+  border-color: rgb(255 138 0 / 0.45);
+  box-shadow:
+    0 1px 2px rgb(15 42 92 / 0.05),
+    0 18px 38px -18px rgb(255 138 0 / 0.45),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+/* ---------- Moins de mouvement demandé : tout reste immobile ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .mw-rise,
+  .mw-enter,
+  .mw-underline,
+  .mw-float,
+  .mw-seam-pulse {
+    animation: none;
+  }
+
+  .mw-flip-box {
+    transition: none;
+  }
+
+  .mw-flip:hover .mw-flip-box,
+  .mw-flip:focus-visible .mw-flip-box {
+    transform: translateZ(calc(var(--d) * -1));
+  }
+}
