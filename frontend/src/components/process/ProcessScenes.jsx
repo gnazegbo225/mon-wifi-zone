@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import logoMark from '../../assets/logo-mark.svg';
 import { CheckIcon, CoinsIcon, DownloadIcon, MapPinIcon, RouterIcon, TagIcon } from '../icons';
 import { EASE } from '../hero/layout';
+import { PaymentLogo } from '../PaymentLogos';
 
 // Apparition d'un élément après `delay` secondes.
 const appear = (animated, delay, from = { opacity: 0, y: 10 }) => ({
@@ -264,19 +265,23 @@ function CashScene({ animated }) {
     <div className="relative flex w-full max-w-[24rem] items-center justify-center">
       <Phone className="mr-24 sm:mr-20">
         <p className="text-center text-sm font-bold text-brand">Paiement</p>
+        <p className="text-center text-sm text-muted">3 jours · 500 F</p>
         <div className="mt-3 flex-1">
           {stage === 0 && (
             <motion.div className="space-y-2" {...appear(animated, 0.2)}>
-              <div className="rounded-xl border border-line bg-white px-3 py-2 text-sm">
-                <p className="text-muted">Forfait</p>
-                <p className="font-bold text-ink">3 jours · 500 F</p>
-              </div>
-              {['Wave', 'Orange Money', 'MTN MoMo'].map((m, i) => (
+              {['wave', 'orange', 'mtn'].map((id, i) => (
                 <div
-                  key={m}
-                  className={`rounded-xl border px-3 py-2 text-sm ${i === 0 ? 'border-brand bg-white font-bold text-brand' : 'border-line bg-white text-ink'}`}
+                  key={id}
+                  className={`flex items-center gap-2 rounded-xl border bg-white px-2 py-1 ${
+                    i === 0 ? 'border-brand ring-1 ring-brand' : 'border-line'
+                  }`}
                 >
-                  {m}
+                  <span
+                    className={`grid size-4 shrink-0 place-items-center rounded-full border-2 ${i === 0 ? 'border-brand' : 'border-line'}`}
+                  >
+                    {i === 0 && <span className="size-1.5 rounded-full bg-brand" />}
+                  </span>
+                  <PaymentLogo id={id} className="h-9 w-24 px-1.5" bordered={false} />
                 </div>
               ))}
             </motion.div>

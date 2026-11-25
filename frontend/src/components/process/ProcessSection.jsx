@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useInView, useReducedMotion } from 'framer-mot
 import { useEffect, useRef, useState } from 'react';
 import { FloorGrid } from '../hero/Backdrops';
 import { EASE } from '../hero/layout';
+import { reveal } from '../reveal';
 import { CheckIcon, PhoneIcon, WifiIcon } from '../icons';
 import { CashScene, PlansScene, PortalScene, ZoneScene } from './ProcessScenes';
 import './process.css';
@@ -19,14 +20,6 @@ const STEPS = [
 
 // Durée d'une étape quand elles défilent seules.
 const STEP_MS = 6000;
-
-// Même apparition au défilement que le reste de la page (Reveal).
-const reveal = (delay = 0) => ({
-  initial: { opacity: 0, y: 16 },
-  whileInView: { opacity: 1, y: 0 },
-  viewport: { once: true, amount: 0.2 },
-  transition: { duration: 0.8, ease: EASE, delay },
-});
 
 function GlobeIcon({ className }) {
   return (
